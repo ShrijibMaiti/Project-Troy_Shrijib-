@@ -9,6 +9,7 @@ Also append-only. Yes, the audit log has its own audit constraints.
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -45,7 +46,7 @@ class AuditLog(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     __tablename__ = "audit_log"
 
     action: Mapped[AuditAction] = mapped_column(
-        Enum(AuditAction, name="audit_action"), nullable=False, index=True
+        PgEnum(AuditAction, "audit_action"), nullable=False, index=True
     )
 
     # "system" for unattended jobs, Clerk user id for human actions.

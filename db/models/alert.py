@@ -8,6 +8,7 @@ threshold ("this setting would have fired N times").
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -48,7 +49,7 @@ class Alert(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     severity: Mapped[AlertSeverity] = mapped_column(
-        Enum(AlertSeverity, name="alert_severity"), nullable=False
+        PgEnum(AlertSeverity, "alert_severity"), nullable=False
     )
     fired_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True

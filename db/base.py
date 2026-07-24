@@ -14,7 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, MetaData
+from sqlalchemy import DateTime, Enum as SAEnum, MetaData
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -57,4 +57,20 @@ class CreatedAtMixin:
         default=utcnow,
         nullable=False,
         index=True,
+    )
+    from sqlalchemy import Enum as SAEnum
+
+
+def PgEnum(py_enum, name: str) -> SAEnum:
+    """
+    Enum column that persists the member VALUE, not the NAME.
+
+    Without values_callable, SQLAlchemy stores 'LEADERSHIP_CHANGE' while every
+    contract in this system uses 'leadership_change'. Raw SQL filters then
+    silently match nothing. Always use this, never sa.Enum directly.
+    """
+    return SAEnum(
+        py_enum,
+        name=name,
+        values_callable=lambda e: [m.value for m in e],
     )

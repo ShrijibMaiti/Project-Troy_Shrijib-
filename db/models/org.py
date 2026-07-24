@@ -7,6 +7,7 @@ meaningless without knowing who edited what.
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -54,7 +55,7 @@ class User(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
     role: Mapped[OrgRole] = mapped_column(
-        Enum(OrgRole, name="org_role"), nullable=False, default=OrgRole.VIEWER
+        PgEnum(OrgRole, "org_role"), nullable=False, default=OrgRole.VIEWER
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

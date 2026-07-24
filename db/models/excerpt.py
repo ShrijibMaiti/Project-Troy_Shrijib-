@@ -11,6 +11,7 @@ Two jobs:
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 from datetime import datetime
 

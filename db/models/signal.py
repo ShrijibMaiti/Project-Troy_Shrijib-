@@ -13,6 +13,7 @@ invalidates every chain that came before it. Decide once, on day one.
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -77,10 +78,10 @@ class Signal(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     metric: Mapped[SignalMetric] = mapped_column(
-        Enum(SignalMetric, name="signal_metric"), nullable=False
+        PgEnum(SignalMetric, "signal_metric"), nullable=False
     )
     source: Mapped[SignalSource] = mapped_column(
-        Enum(SignalSource, name="signal_source"), nullable=False
+        PgEnum(SignalSource, "signal_source"), nullable=False
     )
 
     # ---- The observation -------------------------------------------------

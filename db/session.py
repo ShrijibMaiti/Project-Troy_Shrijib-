@@ -14,6 +14,10 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Load environment variables before module-level variables try to access them
+load_dotenv()
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,

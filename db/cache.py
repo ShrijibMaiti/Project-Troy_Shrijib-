@@ -1,7 +1,7 @@
 """
 Redis cache.
 
-Two rules that are easy to get wrong and expensive to get wrong:
+Three rules that are easy to get wrong and expensive to get wrong:
 
   1. NAMESPACE BY MODEL VERSION. Sentiment and entailment results are cached on
      a hash of their input. If the model changes and the namespace does not,
@@ -10,6 +10,10 @@ Two rules that are easy to get wrong and expensive to get wrong:
 
   2. TTL ON EVERYTHING. The original had an unbounded in-memory dict that grew
      forever. Every key here gets an explicit expiry.
+
+  3. NEVER READ os.environ AT IMPORT TIME. Doing so makes import order
+     load-bearing: any module importing this before .env is loaded dies on
+     boot with a bare KeyError. Config is resolved lazily, inside functions.
 """
 
 from __future__ import annotations
@@ -20,8 +24,9 @@ import os
 from typing import Any
 
 import redis.asyncio as aioredis
+from dotenv import load_dotenv
 
-REDIS_URL = os.environ["REDIS_URL"]
+load_dotenv()
 
 # Bump when the cache format changes in a backward-incompatible way.
 CACHE_SCHEMA_VERSION = "v1"
@@ -34,11 +39,23 @@ VERIFY_TTL = 60 * 5                # 5m  — chain verification is expensive
 _pool: aioredis.Redis | None = None
 
 
+def redis_url() -> str:
+    """Resolved lazily, not at import. See rule 3 above."""
+    url = os.environ.get("REDIS_URL")
+    if not url:
+        raise RuntimeError(
+            "REDIS_URL is not set. Add it to .env "
+            "(e.g. REDIS_URL=redis://localhost:6379/0)"
+        )
+    return url
+
+
 def get_redis() -> aioredis.Redis:
+    """Lazy singleton. The connection is not opened until first use."""
     global _pool
     if _pool is None:
         _pool = aioredis.from_url(
-            REDIS_URL,
+            redis_url(),
             encoding="utf-8",
             decode_responses=True,
             max_connections=32,
@@ -57,6 +74,10 @@ async def close_redis() -> None:
 def _hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:32]
 
+
+# ---------------------------------------------------------------------------
+# Key builders
+# ---------------------------------------------------------------------------
 
 def inference_key(model_id: str, prompt_hash: str, text: str) -> str:
     """
@@ -79,6 +100,10 @@ def artifact_key(content_hash: str) -> str:
 def chain_verify_key() -> str:
     return f"troy:{CACHE_SCHEMA_VERSION}:chain:verify"
 
+
+# ---------------------------------------------------------------------------
+# Operations
+# ---------------------------------------------------------------------------
 
 async def cache_get(key: str) -> Any | None:
     raw = await get_redis().get(key)
@@ -121,6 +146,7 @@ async def invalidate_scores(weights_version: str | None = None) -> int:
 
 
 async def healthcheck() -> bool:
+    """Never raises — /health reports degraded, it does not 500."""
     try:
         return bool(await get_redis().ping())
     except Exception:

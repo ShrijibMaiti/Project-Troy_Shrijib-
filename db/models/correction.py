@@ -14,6 +14,7 @@ This is why the UI must say "supersede and annotate", never "edit".
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -57,7 +58,7 @@ class Correction(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     reason: Mapped[CorrectionReason] = mapped_column(
-        Enum(CorrectionReason, name="correction_reason"), nullable=False
+        PgEnum(CorrectionReason, "correction_reason"), nullable=False
     )
     note: Mapped[str | None] = mapped_column(Text)
 

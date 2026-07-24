@@ -11,6 +11,7 @@ decision satisfies both the identity problem and the register schema.
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -67,7 +68,7 @@ class Vendor(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
 
     # ---- Source routing -------------------------------------------------
     entity_type: Mapped[EntityType] = mapped_column(
-        Enum(EntityType, name="entity_type"),
+        PgEnum(EntityType, "entity_type"),
         nullable=False,
         default=EntityType.UNKNOWN,
     )

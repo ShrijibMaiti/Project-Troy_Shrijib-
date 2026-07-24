@@ -13,6 +13,7 @@ to one computed under v4, and an auditor will ask.
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -54,7 +55,7 @@ class DimensionScore(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     dimension: Mapped[SignalMetric] = mapped_column(
-        Enum(SignalMetric, name="signal_metric"), nullable=False
+        PgEnum(SignalMetric, "signal_metric"), nullable=False
     )
 
     raw_value: Mapped[float | None] = mapped_column(Float)
@@ -70,7 +71,7 @@ class DimensionScore(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     confidence: Mapped[ConfidenceTier] = mapped_column(
-        Enum(ConfidenceTier, name="confidence_tier"),
+        PgEnum(ConfidenceTier, "confidence_tier"),
         nullable=False,
         default=ConfidenceTier.UNCONFIRMED,
     )

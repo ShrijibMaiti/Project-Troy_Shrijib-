@@ -11,6 +11,7 @@ compliance/its_mapping.md can be checked against this file line by line.
 """
 
 from __future__ import annotations
+from db.base import PgEnum
 
 import enum
 import uuid
@@ -90,7 +91,7 @@ class Contract(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
 
     # ---- Resilience -------------------------------------------------------
     substitutability: Mapped[SubstitutabilityRating | None] = mapped_column(
-        Enum(SubstitutabilityRating, name="substitutability_rating")
+        PgEnum(SubstitutabilityRating, "substitutability_rating")
     )
     exit_plan_exists: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
