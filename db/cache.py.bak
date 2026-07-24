@@ -5,7 +5,7 @@ Three rules that are easy to get wrong and expensive to get wrong:
 
   1. NAMESPACE BY MODEL VERSION. Sentiment and entailment results are cached on
      a hash of their input. If the model changes and the namespace does not,
-     you serve results from a model you are no longer running â€” and your
+     you serve results from a model you are no longer running — and your
      "reproducible" score quietly stops being reproducible.
 
   2. TTL ON EVERYTHING. The original had an unbounded in-memory dict that grew
@@ -31,10 +31,10 @@ load_dotenv()
 # Bump when the cache format changes in a backward-incompatible way.
 CACHE_SCHEMA_VERSION = "v1"
 
-DEFAULT_TTL = 60 * 60 * 6          # 6h  â€” general
-INFERENCE_TTL = 60 * 60 * 24 * 30  # 30d â€” model outputs; expensive, stable
-SCORE_TTL = 60 * 15                # 15m â€” recomputed often
-VERIFY_TTL = 60 * 5                # 5m  â€” chain verification is expensive
+DEFAULT_TTL = 60 * 60 * 6          # 6h  — general
+INFERENCE_TTL = 60 * 60 * 24 * 30  # 30d — model outputs; expensive, stable
+SCORE_TTL = 60 * 15                # 15m — recomputed often
+VERIFY_TTL = 60 * 5                # 5m  — chain verification is expensive
 
 _pool: aioredis.Redis | None = None
 
@@ -60,9 +60,6 @@ def get_redis() -> aioredis.Redis:
             decode_responses=True,
             max_connections=32,
             health_check_interval=30,
-            socket_connect_timeout=1,   # fail fast; a cache miss beats a stall
-            socket_timeout=2,
-            retry_on_timeout=False,
         )
     return _pool
 
@@ -111,7 +108,7 @@ def chain_verify_key() -> str:
 async def cache_get(key: str) -> Any | None:
     """
     Fails soft. A cache outage must degrade to a cache miss, never to an
-    error â€” /trust/chain-verify is the product's strongest claim and it
+    error — /trust/chain-verify is the product's strongest claim and it
     cannot 500 because a cache is unavailable.
     """
     try:
@@ -147,7 +144,7 @@ async def cache_delete(key: str) -> None:
 
 async def invalidate_prefix(prefix: str) -> int:
     """
-    SCAN-based invalidation. Never KEYS â€” it blocks the whole server.
+    SCAN-based invalidation. Never KEYS — it blocks the whole server.
     Used when calibration is reloaded and every cached score becomes stale.
     """
     deleted = 0
@@ -161,6 +158,27 @@ async def invalidate_prefix(prefix: str) -> int:
     return deleted
 
 
+async def cache_set(key: str, value: Any, ttl: int = DEFAULT_TTL) -> None:
+    await get_redis().set(key, json.dumps(value, default=str), ex=ttl)
+
+
+async def cache_delete(key: str) -> None:
+    await get_redis().delete(key)
+
+
+async def invalidate_prefix(prefix: str) -> int:
+    """
+    SCAN-based invalidation. Never KEYS — it blocks the whole server.
+    Used when calibration is reloaded and every cached score becomes stale.
+    """
+    r = get_redis()
+    deleted = 0
+    async for key in r.scan_iter(match=f"{prefix}*", count=500):
+        await r.delete(key)
+        deleted += 1
+    return deleted
+
+
 async def invalidate_scores(weights_version: str | None = None) -> int:
     pattern = f"troy:{CACHE_SCHEMA_VERSION}:score:"
     if weights_version:
@@ -169,7 +187,7 @@ async def invalidate_scores(weights_version: str | None = None) -> int:
 
 
 async def healthcheck() -> bool:
-    """Never raises â€” /health reports degraded, it does not 500."""
+    """Never raises — /health reports degraded, it does not 500."""
     try:
         return bool(await get_redis().ping())
     except Exception:

@@ -1,0 +1,78 @@
+# RECALL REGRESSION GATE.
+#
+# Prompt changes are code changes. A prompt tweak can silently destroy
+# validator recall with no compile error and no failing unit test — the model
+# just starts rejecting real signals, and the fleet goes quiet.
+#
+# This is the only defence against that, which is why it blocks merges.
+
+name: Eval
+
+on:
+  pull_request:
+    paths:
+      - "ai/prompts/**"
+      - "ai/validator.py"
+      - "ai/citation_audit.py"
+      - "ai/entailment_audit.py"
+      - "evaluation/**"
+      - "calibration/**"
+  workflow_dispatch:
+
+jobs:
+  recall:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      MIN_RECALL: "0.85"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Check fixture exists
+        id: fixture
+        run: |
+          if [ ! -f evaluation/recall/label_set.jsonl ]; then
+            echo "::warning::No labelled fixture yet — recall is UNMEASURED."
+            echo "Until evaluation/recall/label_set.jsonl exists, the 80% rejection"
+            echo "rate tells us nothing about how many REAL signals are discarded."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "exists=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Measure validator recall
+        if: steps.fixture.outputs.exists == 'true'
+        run: python evaluation/recall/measure.py --min-recall "${MIN_RECALL}"
+
+      - name: Calibration is well-formed
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          d = pathlib.Path("calibration")
+          missing = []
+          for name in ("weights", "thresholds"):
+              p = d / f"{name}.json"
+              if not p.exists():
+                  missing.append(name)
+                  continue
+              json.loads(p.read_text())   # fails loudly on malformed JSON
+          if missing:
+              print(f"::warning::Missing calibration: {missing}. Scores are PROVISIONAL.")
+          else:
+              print("Calibration present and parseable.")
+          PY
+
+      - name: Lead-time chart present
+        run: |
+          if [ -f calibration/lead_time.json ]; then
+            python -c "import json;d=json.load(open('calibration/lead_time.json'));print('median lead time:',d.get('median_lead_days','?'),'days')"
+          else
+            echo "::warning::No backtest result. The 'leading indicator' claim is UNVALIDATED."
+          fi

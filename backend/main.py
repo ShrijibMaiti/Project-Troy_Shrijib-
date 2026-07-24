@@ -30,7 +30,7 @@ from backend.api.v1 import (
 from backend.config import settings
 from db.cache import close_redis
 from db.session import dispose_engine
-
+from security.gdpr import erasure
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -99,6 +99,7 @@ for r in (
 
 app.include_router(health.router, prefix=P)
 app.include_router(sse.router, prefix=P)
+app.include_router(erasure.router, prefix=P)  # <--- Add this line
 
 
 @app.get("/api")

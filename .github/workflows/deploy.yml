@@ -1,0 +1,81 @@
+# Deploy to Railway EU on main.
+#
+# Migrations run BEFORE the app deploys. Deploying code that expects a schema
+# the database doesn't have produces a broken service; the reverse (new schema,
+# old code) is survivable because our migrations are additive.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # never cancel a half-finished deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install alembic sqlalchemy psycopg2-binary python-dotenv
+
+      - name: Run migrations
+        env:
+          SYNC_DATABASE_URL: ${{ secrets.PROD_SYNC_DATABASE_URL }}
+        run: alembic upgrade head
+
+      - name: Verify chain before deploy
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          REDIS_URL: ${{ secrets.PROD_REDIS_URL }}
+          SHRED_MASTER_KEY: ${{ secrets.PROD_SHRED_MASTER_KEY }}
+        run: |
+          pip install asyncpg
+          python scripts/verify_chain_cli.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm i -g @railway/cli
+
+      - name: Deploy API
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service api --detach
+
+      - name: Deploy worker
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service worker --detach
+
+      - name: Deploy scheduler
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service scheduler --detach
+
+      - name: Health check
+        run: |
+          sleep 45
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /tmp/h.json -w "%{http_code}" "${{ secrets.PROD_URL }}/api/v1/health" || echo 000)
+            if [ "$code" = "200" ]; then
+              cat /tmp/h.json
+              status=$(python -c "import json;print(json.load(open('/tmp/h.json'))['status'])")
+              [ "$status" = "error" ] && { echo "::error::Service unhealthy"; exit 1; }
+              echo "Deploy healthy (status=$status)"
+              exit 0
+            fi
+            echo "attempt $i: HTTP $code — retrying"
+            sleep 15
+          done
+          echo "::error::Health check never passed"
+          exit 1

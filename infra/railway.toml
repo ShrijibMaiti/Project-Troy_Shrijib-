@@ -1,0 +1,39 @@
+# Railway deployment — EU REGION.
+#
+# Region is a COMPLIANCE decision, not a latency one. Fix #4: the original
+# stored evidence in US-hosted Airtable, which made Troy itself a
+# data-residency problem for the EU financial entities it sells to.
+#
+# See compliance/dataflow.md for the full residency diagram.
+
+[build]
+builder = "nixpacks"
+nixpacksConfigPath = "infra/nixpacks.toml"
+
+[deploy]
+startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 2"
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+region = "europe-west4"
+
+[[services]]
+name = "api"
+
+[[services]]
+name = "worker"
+startCommand = "arq backend.jobs.runner.WorkerSettings"
+
+[[services]]
+name = "scheduler"
+# EXACTLY ONE instance. Two schedulers means every vendor is captured twice,
+# which doubles cost and creates duplicate signals that dedup must absorb.
+startCommand = "python -m backend.jobs.schedule"
+numReplicas = 1
+
+[env]
+ENVIRONMENT = "production"
+AUTH_MODE = "clerk"
+SCHEDULER_ENABLED = "0"
+LOG_JSON = "1"

@@ -41,3 +41,11 @@ __all__ = [
     "SubjectKey",
     "ShreddedField",
 ]
+from db.models.api_key import (
+    
+    ApiCostEvent,
+    ApiKey,
+    ApiKeyScope,
+    ErasureRequest,
+    ErasureStatus,
+)

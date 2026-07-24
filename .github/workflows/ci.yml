@@ -1,0 +1,133 @@
+# CI — the regression gate.
+#
+# Runs against REAL Postgres and Redis service containers, not mocks. The bugs
+# this project has actually hit (asyncpg parameter typing, enum label casing,
+# append-only triggers) are all invisible to a mocked database.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: troy_owner
+          POSTGRES_PASSWORD: owner_pass
+          POSTGRES_DB: troy
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://troy_app:app_pass@localhost:5432/troy
+      DATABASE_OWNER_URL: postgresql+asyncpg://troy_owner:owner_pass@localhost:5432/troy
+      SYNC_DATABASE_URL: postgresql://troy_owner:owner_pass@localhost:5432/troy
+      REDIS_URL: redis://localhost:6379/0
+      ENVIRONMENT: local
+      AUTH_MODE: dev
+      NOTIFY_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Generate shred key
+        run: echo "SHRED_MASTER_KEY=$(python -c 'import os,base64;print(base64.b64encode(os.urandom(32)).decode())')" >> $GITHUB_ENV
+
+      - name: Create app role
+        run: |
+          PGPASSWORD=owner_pass psql -h localhost -U troy_owner -d troy \
+            -c "CREATE ROLE troy_app LOGIN PASSWORD 'app_pass';" \
+            -c "GRANT USAGE ON SCHEMA public TO troy_app;"
+
+      - name: Migrate
+        run: alembic upgrade head
+
+      - name: Lint
+        run: |
+          ruff check backend db security scripts infra
+          ruff format --check backend db security scripts infra
+
+      - name: Type check
+        run: mypy backend db security --ignore-missing-imports
+        continue-on-error: true  # advisory until annotations are complete
+
+      # THE EVIDENCE-INTEGRITY GATE.
+      # If the hash chain, append-only enforcement or crypto-shredding
+      # regresses, the compliance claim is false and the build must fail.
+      - name: Evidence integrity smoke test
+        run: python scripts/smoke_hash_chain.py
+
+      - name: API tests
+        run: pytest backend/tests -v --tb=short
+
+      - name: Chain verifies after full suite
+        run: python scripts/verify_chain_cli.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    if: hashFiles('frontend/package.json') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx tsc --noEmit
+        working-directory: frontend
+      - run: npm run test --if-present
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  claims-discipline:
+    # Cheap guard against the overclaim that nearly sank the original pitch.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No "DORA Article 28 Register" claims
+        run: |
+          if grep -rniE "(DORA )?Article 28.{0,20}(ICT )?Register" \
+             --include="*.py" --include="*.ts" --include="*.tsx" \
+             --include="*.md" --include="*.json" \
+             --exclude-dir=node_modules --exclude-dir=.git . \
+             | grep -viE "attaches to|not itself a register|28\(3\)|claims_discipline|its_mapping" ; then
+            echo "::error::Found a claim to BE an Article 28 register."
+            echo "Troy produces evidence that ATTACHES TO a register."
+            echo "See compliance/claims_discipline.md"
+            exit 1
+          fi
+          echo "Claims discipline OK"
