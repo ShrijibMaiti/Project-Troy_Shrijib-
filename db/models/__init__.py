@@ -14,6 +14,14 @@ from db.models.score import ConfidenceTier, DimensionScore, VendorScore
 from db.models.signal import Signal, SignalMetric
 from db.models.vendor import EntityType, Vendor
 from db.integrity.crypto_shred import ShreddedField, SubjectKey
+from db.models.export_artifact import ExportArtifact, ExportFormat, ExportKind
+from db.models.api_key import (
+    ApiCostEvent,
+    ApiKey,
+    ApiKeyScope,
+    ErasureRequest,
+    ErasureStatus,
+)
 
 __all__ = [
     "Base",
@@ -40,12 +48,16 @@ __all__ = [
     "User",
     "SubjectKey",
     "ShreddedField",
-]
-from db.models.api_key import (
     
-    ApiCostEvent,
-    ApiKey,
-    ApiKeyScope,
-    ErasureRequest,
-    ErasureStatus,
-)
+    # Domain 7 (Export)
+    "ExportArtifact", 
+    "ExportFormat", 
+    "ExportKind",
+    
+    # Domain 8 (API Keys & GDPR)
+    "ApiCostEvent",
+    "ApiKey",
+    "ApiKeyScope",
+    "ErasureRequest",
+    "ErasureStatus",
+]

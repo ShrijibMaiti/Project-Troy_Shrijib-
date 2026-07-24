@@ -14,6 +14,7 @@ import uuid
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Enum,
     ForeignKey,
     Index,
@@ -38,11 +39,24 @@ class Org(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
 
     clerk_org_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # The FILING ENTITY's own LEI. Mandatory across RT.01.01, RT.01.02,
+    # RT.02.02 and RT.06.01 — the register identifies who is maintaining it.
+    # Org-level configuration, not something Troy discovers.
+    lei: Mapped[str | None] = mapped_column(String(20), unique=True)
+    # ITS entity-type code for the filing entity (credit institution,
+    # payment institution, insurer, etc.). Supplied by the filer.
+    entity_type: Mapped[str | None] = mapped_column(String(64))
     # ISO country of the regulated entity — drives data-residency assertions.
     home_country: Mapped[str | None] = mapped_column(String(2))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     users = relationship("User", back_populates="org", lazy="raise")
+
+    __table_args__ = (
+        CheckConstraint(
+            "lei IS NULL OR lei ~ '^[A-Z0-9]{20}$'", name="org_lei_format"
+        ),
+    )
 
 
 class User(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):

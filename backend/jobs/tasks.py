@@ -268,25 +268,97 @@ async def generate_narrative(ctx: dict, vendor_id: str) -> dict:
 
 
 async def export_register(ctx: dict, org_id: str, fmt: str = "pdf") -> dict:
-    """Domain 7 owns the renderers; this is the queue seam."""
-    oid = uuid.UUID(org_id)
+    """
+    Render and store an export.
+    Content-addressed: if the same inputs produced an export before, this is a
+    lookup, not a render. That is both the correctness rule (an issued document
+    is immutable) and the fix for the original's 130-second cold export.
+    """
+    import uuid as _uuid
+    from db.integrity.hash_chain import head_hash_for_export
+    from db.models.export_artifact import ExportFormat, ExportKind
+    from reporting import artifacts as art
+    oid = _uuid.UUID(org_id)
     await publish(oid, "job.progress", {"stage": "export", "format": fmt, "pct": 10})
-
-    try:
-        if fmt == "its":
-            from reporting.its_export.writer import write_its_register as render
-        else:
-            from reporting.pdf.evidence_pack import render_evidence_pack as render
-    except Exception as exc:
-        await publish(oid, "job.failed", {"stage": "export", "error": str(exc)})
-        return {"skipped": f"reporting module not implemented: {exc}"}
-
     async with SessionFactory() as session:
-        path = await render(session, oid)
+        head = await head_hash_for_export(session)
+        # Everything that determines the output. Two exports with the same
+        # input hash MUST produce identical bytes.
+        from sqlalchemy import func as _f
+        from db.models.contract import Contract as _C
+        from db.models.score import VendorScore as _S
+        max_score = (
+            await session.execute(
+                select(_f.max(_S.computed_at)).join(
+                    Vendor, Vendor.id == _S.vendor_id
+                ).where(Vendor.org_id == oid)
+            )
+        ).scalar_one_or_none()
+        max_reg = (
+            await session.execute(
+                select(_f.max(_C.register_version)).where(_C.org_id == oid)
+            )
+        ).scalar_one_or_none()
+        input_hash = art.compute_input_hash(
+            {
+                "org": org_id,
+                "fmt": fmt,
+                "chain_head": head,
+                "latest_score_at": max_score,
+                "register_version": max_reg,
+            }
+        )
+        existing = await art.find_existing(session, oid, input_hash)
+        if existing is not None:
+            await publish(
+                oid, "job.done",
+                {"stage": "export", "artifact_id": str(existing.id), "cached": True},
+            )
+            return {
+                "org_id": org_id, "format": fmt, "cached": True,
+                "artifact_id": str(existing.id), "content_hash": existing.content_hash,
+            }
+        await publish(oid, "job.progress", {"stage": "export", "pct": 40})
+        if fmt == "its":
+            from reporting.its_export.writer import write_its_register
+            payload = await write_its_register(session, oid, fmt="csv")
+            kind, ext, efmt = ExportKind.ITS_REGISTER, "zip", ExportFormat.ITS_CSV
+        elif fmt == "its_json":
+            from reporting.its_export.writer import write_its_register
+            payload = await write_its_register(session, oid, fmt="json")
+            kind, ext, efmt = ExportKind.ITS_REGISTER, "json", ExportFormat.ITS_JSON
+        else:
+            from reporting.pdf.evidence_pack import render_evidence_pack
+            payload = await render_evidence_pack(session, oid)
+            kind, ext, efmt = ExportKind.EVIDENCE_PACK, "pdf", ExportFormat.PDF
+        await publish(oid, "job.progress", {"stage": "export", "pct": 80})
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+        stored = await art.store(
+            session,
+            org_id=oid,
+            vendor_id=None,
+            kind=kind,
+            fmt=efmt,
+            payload=payload,
+            input_hash=input_hash,
+            chain_head_hash=head,
+            filename=f"troy-{kind.value}-{stamp}.{ext}",
+            generated_by="system",
+            detail={"register_version": max_reg},
+        )
         await session.commit()
-
-    await publish(oid, "job.done", {"stage": "export", "path": str(path)})
-    return {"org_id": org_id, "format": fmt, "path": str(path)}
+    await publish(
+        oid, "job.done",
+        {"stage": "export", "artifact_id": str(stored.id), "cached": stored.from_cache},
+    )
+    return {
+        "org_id": org_id,
+        "format": fmt,
+        "artifact_id": str(stored.id),
+        "content_hash": stored.content_hash,
+        "size_bytes": stored.size_bytes,
+        "cached": stored.from_cache,
+    }
 
 
 async def verify_chain_job(ctx: dict) -> dict:

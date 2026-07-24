@@ -12,16 +12,22 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy import func, select
 
+from backend.ai_assist.contract_extract import ExtractionUnavailable, extract_contract
+from backend.ai_assist.schemas import ContractDraftOut
 from backend.deps import DB, CurrentOrg, Writer, write_audit
 from backend.schemas import ContractIn, ContractOut, JobOut, RegisterRow, VendorOut
 from db.models.alert import Alert
 from db.models.audit_log import AuditAction
 from db.models.contract import Contract, SubstitutabilityRating
+from db.models.export_artifact import ExportFormat, ExportKind
 from db.models.score import VendorScore
 from db.models.vendor import Vendor
+from reporting import artifacts as art
+from reporting.changelog import build_changelog
 
 router = APIRouter(prefix="/register", tags=["register"])
 
@@ -194,6 +200,108 @@ async def export_register(
         status="queued",
         enqueued_at=datetime.now(timezone.utc),
         detail={"format": fmt},
+    )
+
+
+@router.post("/contract/{vendor_id}/extract", response_model=ContractDraftOut)
+async def extract_contract_fields(
+    vendor_id: uuid.UUID,
+    session: DB,
+    org: Writer,
+    file: UploadFile = File(...),
+) -> ContractDraftOut:
+    """
+    Gemma 4 reads the agreement and drafts the register fields.
+    NOTHING IS SAVED. The analyst reviews the draft — every field carries the
+    verbatim clause it came from — edits, then confirms through
+    PUT /register/contract/{vendor_id}, which is the existing tested path.
+    The PDF is discarded after extraction. We do not store customer contracts.
+    """
+    v = (
+        await session.execute(
+            select(Vendor).where(Vendor.id == vendor_id, Vendor.org_id == org.org_id)
+        )
+    ).scalar_one_or_none()
+    if v is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Vendor not found")
+    if file.content_type not in ("application/pdf", "application/octet-stream"):
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Only PDF uploads are accepted"
+        )
+    payload = await file.read()
+    try:
+        return await extract_contract(
+            session,
+            vendor_id=vendor_id,
+            org_id=org.org_id,
+            pdf_bytes=payload,
+            filename=file.filename or "contract.pdf",
+        )
+    except ExtractionUnavailable as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            f"Automatic extraction unavailable ({exc}). Enter the fields manually.",
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    finally:
+        del payload  # do not retain the document
+
+
+@router.get("/changelog")
+async def register_changelog(session: DB, org: CurrentOrg) -> dict:
+    """What changed since the last register export — the living-document view."""
+    log = await build_changelog(session, org.org_id)
+    return log.as_dict()
+
+
+@router.get("/exports")
+async def list_exports(session: DB, org: CurrentOrg) -> list[dict]:
+    rows = await art.list_artifacts(session, org.org_id)
+    return [
+        {
+            "id": str(r.id),
+            "kind": r.kind.value,
+            "format": r.fmt.value,
+            "filename": r.filename,
+            "size_bytes": r.size_bytes,
+            "generated_at": r.generated_at.isoformat(),
+            "generated_by": r.generated_by,
+            "chain_head_hash": r.chain_head_hash,
+            "content_hash": r.content_hash,
+            "superseded": r.superseded,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/exports/{artifact_id}/download")
+async def download_export(
+    artifact_id: uuid.UUID, session: DB, org: CurrentOrg
+) -> Response:
+    """
+    RETRIEVAL, never regeneration.
+    An auditor asking for the March register gets the bytes issued in March.
+    Re-rendering would produce a different document and break the trail this
+    system exists to provide.
+    """
+    found = await art.retrieve(session, org.org_id, artifact_id)
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Export not found")
+    row, payload = found
+    media = {
+        "pdf": "application/pdf",
+        "its_csv": "application/zip",
+        "its_json": "application/json",
+    }[row.fmt.value]
+    return Response(
+        content=payload,
+        media_type=media,
+        headers={
+            "Content-Disposition": f'attachment; filename="{row.filename}"',
+            "X-Troy-Content-Hash": row.content_hash,
+            "X-Troy-Chain-Head": row.chain_head_hash,
+        },
     )
 
 
