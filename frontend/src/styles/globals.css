@@ -1,0 +1,44 @@
+@import './fonts/fonts.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0b;
+  color: #e6e4df;
+  font-family: 'General Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: #e6e4df;
+  text-decoration: none;
+}
+a:hover {
+  color: #ffffff;
+}
+
+::selection {
+  background: rgba(230, 228, 223, 0.2);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #55555c;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #26262b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

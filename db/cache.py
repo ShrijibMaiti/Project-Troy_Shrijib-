@@ -1,0 +1,127 @@
+"""
+Redis cache.
+
+Two rules that are easy to get wrong and expensive to get wrong:
+
+  1. NAMESPACE BY MODEL VERSION. Sentiment and entailment results are cached on
+     a hash of their input. If the model changes and the namespace does not,
+     you serve results from a model you are no longer running — and your
+     "reproducible" score quietly stops being reproducible.
+
+  2. TTL ON EVERYTHING. The original had an unbounded in-memory dict that grew
+     forever. Every key here gets an explicit expiry.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from typing import Any
+
+import redis.asyncio as aioredis
+
+REDIS_URL = os.environ["REDIS_URL"]
+
+# Bump when the cache format changes in a backward-incompatible way.
+CACHE_SCHEMA_VERSION = "v1"
+
+DEFAULT_TTL = 60 * 60 * 6          # 6h  — general
+INFERENCE_TTL = 60 * 60 * 24 * 30  # 30d — model outputs; expensive, stable
+SCORE_TTL = 60 * 15                # 15m — recomputed often
+VERIFY_TTL = 60 * 5                # 5m  — chain verification is expensive
+
+_pool: aioredis.Redis | None = None
+
+
+def get_redis() -> aioredis.Redis:
+    global _pool
+    if _pool is None:
+        _pool = aioredis.from_url(
+            REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            max_connections=32,
+            health_check_interval=30,
+        )
+    return _pool
+
+
+async def close_redis() -> None:
+    global _pool
+    if _pool is not None:
+        await _pool.aclose()
+        _pool = None
+
+
+def _hash(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:32]
+
+
+def inference_key(model_id: str, prompt_hash: str, text: str) -> str:
+    """
+    Cache key for a model call.
+
+    model_id AND prompt_hash are both in the key. Change either and you get a
+    fresh call rather than a stale answer attributed to the wrong version.
+    """
+    return f"troy:{CACHE_SCHEMA_VERSION}:infer:{model_id}:{prompt_hash[:16]}:{_hash(text)}"
+
+
+def score_key(vendor_id: str, weights_version: str) -> str:
+    return f"troy:{CACHE_SCHEMA_VERSION}:score:{weights_version}:{vendor_id}"
+
+
+def artifact_key(content_hash: str) -> str:
+    return f"troy:{CACHE_SCHEMA_VERSION}:artifact:{content_hash}"
+
+
+def chain_verify_key() -> str:
+    return f"troy:{CACHE_SCHEMA_VERSION}:chain:verify"
+
+
+async def cache_get(key: str) -> Any | None:
+    raw = await get_redis().get(key)
+    if raw is None:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Poisoned entry — drop it rather than propagate the failure.
+        await get_redis().delete(key)
+        return None
+
+
+async def cache_set(key: str, value: Any, ttl: int = DEFAULT_TTL) -> None:
+    await get_redis().set(key, json.dumps(value, default=str), ex=ttl)
+
+
+async def cache_delete(key: str) -> None:
+    await get_redis().delete(key)
+
+
+async def invalidate_prefix(prefix: str) -> int:
+    """
+    SCAN-based invalidation. Never KEYS — it blocks the whole server.
+    Used when calibration is reloaded and every cached score becomes stale.
+    """
+    r = get_redis()
+    deleted = 0
+    async for key in r.scan_iter(match=f"{prefix}*", count=500):
+        await r.delete(key)
+        deleted += 1
+    return deleted
+
+
+async def invalidate_scores(weights_version: str | None = None) -> int:
+    pattern = f"troy:{CACHE_SCHEMA_VERSION}:score:"
+    if weights_version:
+        pattern += f"{weights_version}:"
+    return await invalidate_prefix(pattern)
+
+
+async def healthcheck() -> bool:
+    try:
+        return bool(await get_redis().ping())
+    except Exception:
+        return False
