@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import HashChainStatus from '@/components/evidence/HashChainStatus';
 import { useEvidence } from '@/lib/queries';
+import { verifyChain } from '@/lib/api';
 
 export default function Evidence() {
   const { data } = useEvidence();
@@ -15,23 +16,26 @@ export default function Evidence() {
   const { audit1, audit2, headHash, chain, versions, lastRun, recordCount } = data;
   const records = recordCount.toLocaleString('en-US');
 
-  const startVerify = () => {
+  const startVerify = async () => {
     if (verifying) return;
-    setVerifying(true);
-    setVerified(false);
-    setVerifyStep(-1);
+    setVerifying(true); setVerified(false); setVerifyStep(-1);
+    // animate the walk while the REAL verification runs
     let step = -1;
     iv.current = setInterval(() => {
       step++;
-      if (step >= chain.length) {
-        clearInterval(iv.current);
-        setVerifying(false);
-        setVerified(true);
-        setVerifyStep(chain.length);
-      } else {
-        setVerifyStep(step);
-      }
-    }, 260);
+      if (step < chain.length) setVerifyStep(step);
+    }, 120);
+    try {
+      const result = await verifyChain();   // real re-walk + re-hash
+      clearInterval(iv.current);
+      setVerifyStep(chain.length);
+      setVerified(result.ok);
+    } catch {
+      clearInterval(iv.current);
+      setVerifying(false);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const auditCard = (label: string, a: typeof audit1) => (

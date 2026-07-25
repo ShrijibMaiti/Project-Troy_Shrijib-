@@ -10,12 +10,11 @@ import SourceLink from '@/components/evidence/SourceLink';
 import NarrativeView from '@/components/narrative/NarrativeView';
 import { useAppendSupersede, useVendorDetail } from '@/lib/queries';
 import { useUiStore } from '@/lib/store';
-import { estimateSupersedeImpact } from '@/lib/scoring';
 
 const ALERT_THRESHOLD = 65;
 
 export default function VendorDetail() {
-  const { id = 'aldermere' } = useParams();
+  const { id } = useParams();
   const { data } = useVendorDetail(id);
   const { activeSignal, setActiveSignal } = useUiStore();
   const appendSupersede = useAppendSupersede();
@@ -27,6 +26,7 @@ export default function VendorDetail() {
   const signalRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  if (!id) return <div className="p-8 font-mono text-mute">No vendor selected — return to Fleet.</div>;
   if (!data) return null;
   const { vendor, signals, narrative, dimensions, hist, eventWeeks, scoreDelta90d, artifactMeta } = data;
 
@@ -39,13 +39,13 @@ export default function VendorDetail() {
 
   const disputedClaim = narrative.find((sn) => sn.n === disputeN);
   const disputedSignal = signals.find((sig) => sig.n === disputeN);
-  const disputeDelta = disputedSignal ? estimateSupersedeImpact(disputedSignal, dimensions) : 0;
+  const disputeDelta = 0; // real delta comes back in the dispute response
 
   const submitDispute = (annotation: string) => {
     const claimN = disputeN;
     setDisputeN(0);
     appendSupersede.mutate(
-      { claimN, vendorName: vendor.name, annotation, scoreDelta: disputeDelta },
+      { claimN, vendorName: vendor.name, annotation, scoreDelta: 0, signalId: disputedSignal?.id /* see note */ },
       {
         onSuccess: ({ recordNumber }) => {
           setToastRecord(recordNumber);
@@ -64,11 +64,15 @@ export default function VendorDetail() {
         </Link>
         <span className="text-line-2">/</span>
         <h1 className="m-0 text-[22px] font-semibold tracking-[-.01em]">{vendor.name}</h1>
-        <span className="rounded-sm border border-tint-red-border bg-tint-red-bg px-[9px] py-1 font-mono text-[9.5px] tracking-[.14em] text-risk-red">
-          ALERT
+        <span className={`rounded-sm border px-[9px] py-1 font-mono text-[9.5px] tracking-[.14em] ${
+          vendor.state === 'ALERT' ? 'border-tint-red-border bg-tint-red-bg text-risk-red'
+          : vendor.state === 'WATCH' ? 'border-tint-amber-border bg-tint-amber-bg text-risk-amber'
+          : 'border-line-2 text-dim'
+        }`}>
+          {vendor.state}
         </span>
         <span className="rounded-sm border border-line-2 px-[9px] py-1 font-mono text-[9.5px] tracking-[.1em] text-dim">
-          PRIVATE · TIER 2 COVERAGE
+          {vendor.tier}
         </span>
         <StalenessChip days={vendor.staleDays} variant="header" />
         <span className="ml-auto font-mono text-[9.5px] tracking-[.1em] text-risk-green">

@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
+import { setAuthTokenGetter } from '@/lib/api';
 import Landing from '@/pages/Landing';
 import SignIn from '@/pages/SignIn';
 import Fleet from '@/pages/Fleet';
@@ -11,6 +14,12 @@ import Compare from '@/pages/Compare';
 import Settings from '@/pages/Settings';
 
 export default function App() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+  }, [getToken]);
+
   return (
     <Routes>
       <Route path="/" element={<Landing />} />

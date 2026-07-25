@@ -1,0 +1,26 @@
+{
+  "_status": "provisional_directional",
+  "median_lead_days": null,
+  "events_tested": 1,
+  "controls": 1,
+  "control_fp_rate": null,
+  "summary": "Early backtest on one failure case (Silicon Valley Bank) and one control (Fifth Third Bancorp). The legal-risk dimension registered elevated activity in the failure case. Separation between failure and control is not yet established, and news-volume scoring did not contribute in this run. These results are directional evidence that the approach detects legal-risk signals; they are not a statistical validation of lead time.",
+  "cases": {
+    "Silicon Valley Bank": {
+      "label": "failed",
+      "score_crossed_threshold_days_before_failure": 0,
+      "note": "Composite rose to 3.1/10 on the failure date; earlier elevation to 0.4 occurred ~7 weeks prior on legal signal."
+    },
+    "Fifth Third Bancorp": {
+      "label": "control",
+      "peak_composite": 2.6,
+      "note": "Control peaked at 2.6/10; did not fail. Control scoring in range of the failure case indicates the current threshold does not yet separate the two."
+    }
+  },
+  "limitations": [
+    "Single failure case and single control — no statistical power.",
+    "News-volume dimension produced zero across all observations; not yet contributing.",
+    "Threshold does not yet separate the failure case from the healthy control.",
+    "Legal-risk signal is the only active dimension in this run."
+  ]
+}

@@ -2,7 +2,6 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 
 const NAV = [
   { to: '/fleet', label: 'FLEET' },
-  { to: '/vendor/aldermere', label: 'VENDOR' },
   { to: '/evidence', label: 'EVIDENCE' },
   { to: '/methodology', label: 'METHODOLOGY' },
   { to: '/register', label: 'REGISTER' },
@@ -37,10 +36,10 @@ export default function AppShell() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-[7px]">
             <span className="h-1.5 w-1.5 animate-blink rounded-full bg-risk-green" />
-            <span className="font-mono text-[10px] tracking-[.1em] text-dim">CAPTURE 06:00 UTC · 8/8 OK</span>
+            <span className="font-mono text-[10px] tracking-[.1em] text-dim">DEV · AUTH BYPASS</span>
           </div>
           <span className="rounded-sm border border-line-2 px-2.5 py-[5px] font-mono text-[10px] tracking-[.1em] text-mute">
-            E. VANCE · ANALYST
+            MERIDIAN GRC
           </span>
         </div>
       </nav>

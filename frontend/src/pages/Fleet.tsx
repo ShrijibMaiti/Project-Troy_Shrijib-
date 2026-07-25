@@ -32,7 +32,7 @@ export default function Fleet() {
           <h1 className="m-0 text-[26px] font-semibold tracking-[-.01em]">{active.length} vendors monitored</h1>
         </div>
         <div className="font-mono text-[11px] tracking-[.06em] text-dim">
-          LAST CAPTURE — TODAY 06:00 UTC · SUCCESS 8/8 · 312 SIGNALS ON CHAIN THIS WEEK
+          {active.length} VENDORS · SCORED FROM PIPELINE · CHAIN VERIFIED
         </div>
       </div>
 

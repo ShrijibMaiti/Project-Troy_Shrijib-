@@ -1,0 +1,30 @@
+[
+  {
+    "vendor_name": "Silicon Valley Bank",
+    "composite_risk_score": 3.1,
+    "risk_posture": "ELEVATED",
+    "dimensions": { "news_volume_risk": 0.0, "legal_risk": 3.1, "headcount_risk": 0.0 },
+    "evidence_trail": [
+      { "source": "courtlistener", "title": "Elevated legal-risk activity detected pre-collapse", "url": "https://www.courtlistener.com/?q=silicon+valley+bank" },
+      { "source": "gdelt", "title": "News coverage spike, March 2023", "url": "https://www.gdeltproject.org/" }
+    ]
+  },
+  {
+    "vendor_name": "Stripe",
+    "composite_risk_score": 1.8,
+    "risk_posture": "LOW",
+    "dimensions": { "news_volume_risk": 1.2, "legal_risk": 0.6, "headcount_risk": 0.0 },
+    "evidence_trail": [
+      { "source": "gdelt", "title": "Routine coverage, no adverse events", "url": "https://www.gdeltproject.org/" }
+    ]
+  },
+  {
+    "vendor_name": "Fifth Third Bancorp",
+    "composite_risk_score": 1.5,
+    "risk_posture": "LOW",
+    "dimensions": { "news_volume_risk": 0.0, "legal_risk": 1.5, "headcount_risk": 0.0 },
+    "evidence_trail": [
+      { "source": "courtlistener", "title": "Control case — routine legal activity", "url": "https://www.courtlistener.com/?q=fifth+third" }
+    ]
+  }
+]

@@ -25,6 +25,7 @@ export interface AlertItem {
 }
 
 export interface Signal {
+  id: string;        // <-- add this, the real backend UUID for disputing
   n: number;
   date: string;
   title: string;
