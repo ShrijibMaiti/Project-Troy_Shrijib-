@@ -203,6 +203,100 @@ async def export_register(
     )
 
 
+@router.post("/export-sync")
+async def export_register_sync(
+    session: DB,
+    org: Writer,
+    fmt: str = Query("pdf", pattern="^(pdf|its)$"),
+) -> dict:
+    """
+    Synchronous export — renders inline and returns the artifact immediately.
+    Same content-addressed store as the job path (retrieve-never-regenerate),
+    but without the ARQ worker. Used by the UI so the download works with no
+    queue dependency. The job endpoint remains for production; this is the
+    demo/immediate path.
+    """
+    import uuid as _uuid
+    from datetime import datetime, timezone
+    from sqlalchemy import func as _f, select as _select
+    from db.integrity.hash_chain import head_hash_for_export
+    from db.models.contract import Contract as _C
+    from db.models.export_artifact import ExportFormat, ExportKind
+    from db.models.score import VendorScore as _S
+    from db.models.vendor import Vendor as _V
+    from reporting import artifacts as art
+    oid = org.org_id
+    head = await head_hash_for_export(session)
+    max_score = (
+        await session.execute(
+            _select(_f.max(_S.computed_at))
+            .join(_V, _V.id == _S.vendor_id)
+            .where(_V.org_id == oid)
+        )
+    ).scalar_one_or_none()
+    max_reg = (
+        await session.execute(
+            _select(_f.max(_C.register_version)).where(_C.org_id == oid)
+        )
+    ).scalar_one_or_none()
+    input_hash = art.compute_input_hash(
+        {
+            "org": str(oid),
+            "fmt": fmt,
+            "chain_head": head,
+            "latest_score_at": max_score,
+            "register_version": max_reg,
+        }
+    )
+    existing = await art.find_existing(session, oid, input_hash)
+    if existing is not None:
+        return {
+            "artifact_id": str(existing.id),
+            "filename": existing.filename,
+            "content_hash": existing.content_hash,
+            "chain_head_hash": existing.chain_head_hash,
+            "cached": True,
+        }
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+    if fmt == "its":
+        from reporting.its_export.writer import write_its_register
+        payload = await write_its_register(session, oid, fmt="csv")
+        kind, ext, efmt = ExportKind.ITS_REGISTER, "zip", ExportFormat.ITS_CSV
+    else:
+        from reporting.pdf.evidence_pack import render_evidence_pack
+        payload = await render_evidence_pack(session, oid)
+        kind, ext, efmt = ExportKind.EVIDENCE_PACK, "pdf", ExportFormat.PDF
+    stored = await art.store(
+        session,
+        org_id=oid,
+        vendor_id=None,
+        kind=kind,
+        fmt=efmt,
+        payload=payload,
+        input_hash=input_hash,
+        chain_head_hash=head,
+        filename=f"troy-{kind.value}-{stamp}.{ext}",
+        generated_by=getattr(org, "actor", "system"),
+        detail={"register_version": max_reg},
+    )
+    await write_audit(
+        session,
+        org,
+        AuditAction.REGISTER_EXPORTED if fmt == "its" else AuditAction.PDF_EXPORTED,
+        entity_type="org",
+        entity_id=oid,
+        detail={"format": fmt, "artifact_id": str(stored.id), "sync": True},
+    )
+    await session.commit()
+    return {
+        "artifact_id": str(stored.id),
+        "filename": stored.filename,
+        "content_hash": stored.content_hash,
+        "chain_head_hash": stored.chain_head_hash,
+        "cached": stored.from_cache,
+    }
+
+
 @router.post("/contract/{vendor_id}/extract", response_model=ContractDraftOut)
 async def extract_contract_fields(
     vendor_id: uuid.UUID,

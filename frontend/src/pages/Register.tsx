@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import ExportButton from '@/components/jobs/ExportButton';
 import JobProgress from '@/components/jobs/JobProgress';
 import RiskBadge from '@/components/risk/RiskBadge';
 import StalenessChip from '@/components/risk/StalenessChip';
 import { useRegister } from '@/lib/queries';
+import { runExport, downloadExport } from '@/lib/api';
 
 const GRID =
   'grid min-w-[1280px] grid-cols-[200px_130px_110px_150px_110px_140px_120px_90px_110px_120px] gap-3';
@@ -15,28 +16,33 @@ export default function RegisterPage() {
   const [jobState, setJobState] = useState<JobState>('idle');
   const [jobPct, setJobPct] = useState(0);
   const [jobType, setJobType] = useState('');
-  const iv = useRef<ReturnType<typeof setInterval>>();
-
-  useEffect(() => () => clearInterval(iv.current), []);
+  const [artifactId, setArtifactId] = useState<string | null>(null);
+  const [artifactName, setArtifactName] = useState('');
+  const [contentHash, setContentHash] = useState('');
 
   if (!data) return null;
 
-  const startJob = (type: string) => () => {
+  const startJob = (type: string) => async () => {
     if (jobState === 'running') return;
     setJobState('running');
-    setJobPct(0);
+    setJobPct(30);
     setJobType(type);
-    iv.current = setInterval(() => {
-      setJobPct((prev) => {
-        const p = Math.min(100, prev + 7 + Math.random() * 9);
-        if (p >= 100) {
-          clearInterval(iv.current);
-          setJobState('done');
-          return 100;
-        }
-        return p;
-      });
-    }, 300);
+    setArtifactId(null);
+    try {
+      const r = await runExport(type === 'PDF' ? 'pdf' : 'its');
+      setArtifactId(r.artifactId);
+      setArtifactName(r.filename);
+      setContentHash(r.contentHash);
+      setJobPct(100);
+      setJobState('done');
+    } catch (e) {
+      console.error('export failed', e);
+      setJobState('idle');
+    }
+  };
+
+  const handleDownload = () => {
+    if (artifactId) downloadExport(artifactId, artifactName || 'troy-export');
   };
 
   const jobVisible = jobState !== 'idle';
@@ -60,7 +66,15 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {jobVisible && <JobProgress jobType={jobType} pct={jobPct} done={jobDone} />}
+      {jobVisible && (
+        <JobProgress
+          jobType={jobType}
+          pct={jobPct}
+          done={jobDone}
+          contentHash={contentHash}
+          onDownload={handleDownload}
+        />
+      )}
 
       <div className="overflow-x-auto border border-line">
         <div className={`${GRID} border-b border-line px-[18px] py-3 font-mono text-[9px] tracking-[.14em] text-mute`}>

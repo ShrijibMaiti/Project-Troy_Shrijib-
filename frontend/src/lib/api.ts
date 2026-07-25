@@ -344,6 +344,82 @@ export async function getRegister(): Promise<{ rows: RegisterRow[]; changelog: C
   return { rows: registerFixtures, changelog: changelogFixtures };
 }
 
+export async function startExport(fmt: 'pdf' | 'its'): Promise<{ jobId: string | null }> {
+  const res = await apiFetch<any>('/api/v1/register/export', {
+    method: 'POST',
+    body: JSON.stringify({ format: fmt }),
+  });
+  return { jobId: res.job_id ?? res.id ?? null };
+}
+
+export interface ExportArtifact {
+  id: string;
+  kind: string;
+  format: string;
+  filename: string;
+  generated_at: string;
+  content_hash: string;
+  chain_head_hash: string;
+}
+
+export async function listExports(): Promise<ExportArtifact[]> {
+  const raw = await apiFetch<any[]>('/api/v1/register/exports');
+  return (raw ?? []).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    format: r.format,
+    filename: r.filename,
+    generated_at: r.generated_at,
+    content_hash: r.content_hash,
+    chain_head_hash: r.chain_head_hash,
+  }));
+}
+
+export interface ExportResult {
+  artifactId: string;
+  filename: string;
+  contentHash: string;
+  chainHead: string;
+  cached: boolean;
+}
+
+/** Renders synchronously and returns the artifact. No job queue, no polling. */
+export async function runExport(fmt: 'pdf' | 'its'): Promise<ExportResult> {
+  const res = await apiFetch<any>(`/api/v1/register/export-sync?fmt=${fmt}`, {
+    method: 'POST',
+  });
+  return {
+    artifactId: res.artifact_id,
+    filename: res.filename,
+    contentHash: res.content_hash,
+    chainHead: res.chain_head_hash,
+    cached: res.cached ?? false,
+  };
+}
+
+/** Downloads the real bytes. Triggers a browser save. */
+export async function downloadExport(artifactId: string, filename: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (DEV_ORG_ID) headers['X-Org-Id'] = DEV_ORG_ID;
+  if (getTokenFn) {
+    try {
+      const t = await getTokenFn();
+      if (t) headers['Authorization'] = `Bearer ${t}`;
+    } catch { /* ignore */ }
+  }
+  const res = await fetch(`${API_URL}/api/v1/register/exports/${artifactId}/download`, { headers });
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function getCompare(): Promise<{ rows: CompareRow[]; findings: ConcentrationFinding[] }> {
   return { rows: compareRows, findings: concentrationFindings };  // stays fixture for demo
 }
