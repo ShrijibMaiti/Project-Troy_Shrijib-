@@ -19,7 +19,7 @@ import {
 
 import type {
   AlertItem, ChainEvent, CompareRow, ConcentrationFinding, ChangelogEntry,
-  EvidenceData, MethodologyData, RegisterRow, Vendor, VendorDetail, VendorState,
+  EvidenceData, MethodologyData, MethodologyLive, SeriesPoint, RegisterRow, Vendor, VendorDetail, VendorState,
   Confidence, Dimension, Signal, NarrativeSentence,
 } from '@/types/api';
 
@@ -127,13 +127,22 @@ export async function getAlerts(): Promise<AlertItem[]> {
 
 export interface VendorInput { name: string; tier: string; }
 
+const TIER_TO_ENTITY: Record<string, string> = {
+  'PUBLIC·T1': 'public_us',
+  'PUBLIC·T2': 'public_eu',
+  'PRIVATE·T1': 'private',
+  'PRIVATE·T2': 'private',
+  'PRIVATE·T3': 'private',
+};
+
 export async function addVendor(input: VendorInput): Promise<Vendor> {
   const created = await apiFetch<any>('/api/v1/vendors', {
     method: 'POST',
     body: JSON.stringify({
       display_name: input.name,
       legal_name: input.name,
-      entity_type: (input.tier || 'unknown').toLowerCase().replace(/ /g, '_'),
+      // Coverage tier is a UI concept; the backend stores an EntityType enum.
+      entity_type: TIER_TO_ENTITY[input.tier] ?? 'unknown',
     }),
   });
   return mapVendor(created);
@@ -306,11 +315,58 @@ export async function getEvidence(): Promise<EvidenceData> {
 
 // ---- methodology / register / compare (leave fixture-friendly for now) ---
 
-export async function getMethodology(): Promise<MethodologyData> {
-  // Serve fixtures for now: the backend /methodology shape differs from what
-  // this page renders, and real calibration is still provisional. Not on the
-  // demo critical path.
-  return methodologyFixtures;
+export async function getMethodology(): Promise<MethodologyLive> {
+  const d = await apiFetch<any>('/api/v1/methodology');
+  const lt = d.lead_time ?? {};
+  const cases = lt.cases ?? {};
+  const names = Object.keys(cases);
+  const failedName = names.find((n) => cases[n]?.label === 'failed') ?? names[0] ?? '—';
+  const controlName = names.find((n) => cases[n]?.label === 'control') ?? names[1] ?? '—';
+  // Merge the two raw series into one date-indexed array for plotting.
+  const raw = d.backtest_series ?? {};
+  const byDate = new Map<string, SeriesPoint>();
+  for (const [vendor, block] of Object.entries<any>(raw)) {
+    const isFailed = block?.label === 'failed';
+    for (const p of block?.score_series ?? []) {
+      const row = byDate.get(p.date) ?? { date: p.date, failed: null, control: null };
+      if (isFailed) row.failed = p.composite_score;
+      else row.control = p.composite_score;
+      byDate.set(p.date, row);
+    }
+  }
+  const series = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  // Weights are only shown if genuinely calibrated. No fitted weights exist yet.
+  const w = d.weights?.weights ?? d.weights ?? null;
+  const weights = w
+    ? Object.entries<any>(w)
+        .filter(([k]) => !k.startsWith('_'))
+        .map(([name, v]) => ({ name: name.replace(/_/g, ' ').toUpperCase(), v: Number(v) }))
+    : [];
+  const th = d.thresholds ?? null;
+  const thresholds = th
+    ? Object.entries<any>(th)
+        .filter(([k]) => !k.startsWith('_'))
+        .map(([label, value]) => ({ label: label.replace(/_/g, ' ').toUpperCase(), value: String(value) }))
+    : [];
+  return {
+    calibrated: !!d.calibrated,
+    engineVersion: d.engine_version ?? '—',
+    status: lt._status ?? 'not_run',
+    summary: lt.summary ?? 'No backtest has been run.',
+    eventsTested: lt.events_tested ?? 0,
+    controls: lt.controls ?? 0,
+    leadDays: cases[failedName]?.score_crossed_threshold_days_before_failure ?? null,
+    controlFpRate: lt.control_fp_rate ?? null,
+    peakFailed: Math.max(0, ...series.map((s) => s.failed ?? 0)) || null,
+    peakControl: Math.max(0, ...series.map((s) => s.control ?? 0)) || null,
+    failedName,
+    controlName,
+    failureDate: series.length ? series[series.length - 1].date : null,
+    series,
+    weights,
+    thresholds,
+    limitations: [...(d.limitations ?? []), ...(lt.limitations ?? [])],
+  };
 }
 
 export async function getRegister(): Promise<{ rows: RegisterRow[]; changelog: ChangelogEntry[] }> {
@@ -420,6 +476,18 @@ export async function downloadExport(artifactId: string, filename: string): Prom
   URL.revokeObjectURL(url);
 }
 
-export async function getCompare(): Promise<{ rows: CompareRow[]; findings: ConcentrationFinding[] }> {
-  return { rows: compareRows, findings: concentrationFindings };  // stays fixture for demo
+export async function getCompare(): Promise<{
+  rows: CompareRow[]; findings: ConcentrationFinding[]; note: string;
+}> {
+  const d = await apiFetch<any>('/api/v1/compare/concentration');
+  const rows: CompareRow[] = (d.rows ?? []).map((r: any) => ({
+    vendorId: r.vendor_id,
+    name: r.name,
+    score: r.score ?? 0,
+    cloud: { value: r.cloud.value, level: r.cloud.level },
+    region: { value: r.region.value, level: r.region.level },
+    kyc: { value: r.kyc.value, level: r.kyc.level },
+    sector: { value: r.sector.value, level: r.sector.level },
+  }));
+  return { rows, findings: d.findings ?? [], note: d.note ?? '' };
 }

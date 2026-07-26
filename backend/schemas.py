@@ -341,6 +341,7 @@ class MethodologyOut(BaseModel):
     calibrated: bool
     limitations: list[str]
     engine_version: str
+    backtest_series: dict | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +360,37 @@ class CompareOut(BaseModel):
     dimensions: list[str]
     matrix: list[CompareCell]
     trends: dict[str, list[ScorePoint]]
+
+
+class ConcentrationCell(BaseModel):
+    value: str
+    level: int  # 0 = unique, 1 = shared by 2, 2 = shared by 3+
+
+
+class ConcentrationRow(BaseModel):
+    vendor_id: uuid.UUID
+    name: str
+    score: float | None
+    cloud: ConcentrationCell
+    region: ConcentrationCell
+    kyc: ConcentrationCell
+    sector: ConcentrationCell
+    has_contract: bool
+
+
+class ConcentrationFinding(BaseModel):
+    stat: str
+    tone: Literal["amber", "red"]
+    label: str
+    body: str
+
+
+class ConcentrationOut(BaseModel):
+    rows: list[ConcentrationRow]
+    findings: list[ConcentrationFinding]
+    vendors_total: int
+    vendors_with_contract: int
+    note: str
 
 
 class HealthOut(BaseModel):

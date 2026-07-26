@@ -31,8 +31,8 @@ LIMITATIONS = [
     "public-company coverage.",
     "Scores are relative to each vendor's own trailing baseline, not to peers. "
     "A high score means unusual for THIS vendor.",
-    "Backtest evidence is directional, not statistical. A small event set "
-    "supports 'the score moved first'; it does not support a precision claim.",
+    "Backtest evidence is directional, not statistical. The current event set is "
+    "too small to support any claim about lead time or precision.",
     "This is monitoring evidence that attaches to an Article 28(3) register. "
     "It is not itself a register of information.",
 ]
@@ -43,11 +43,15 @@ async def methodology(org: CurrentOrg) -> MethodologyOut:
     weights = settings.load_calibration("weights")
     thresholds = settings.load_calibration("thresholds")
     lead_time = settings.load_calibration("lead_time")
-
+    # Raw per-day score series from the backtest. Served so the UI can plot the
+    # actual curves rather than a summary — the reader should see that the
+    # control tracks the failure case, not be told it.
+    series = settings.load_calibration("backtest_series")
     return MethodologyOut(
         weights=weights,
         thresholds=thresholds,
         lead_time=lead_time,
+        backtest_series=series,
         calibrated=bool(weights and thresholds),
         limitations=LIMITATIONS,
         engine_version=ENGINE_VERSION,
