@@ -32,6 +32,7 @@ from db.cache import close_redis
 from db.session import dispose_engine
 from security.gdpr import erasure
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     warnings = settings.validate_runtime()  # raises on fatal misconfiguration

@@ -106,9 +106,7 @@ async def ingest_pipeline_output(
     # --- Vendor (find or create) -----------------------------------------
     vendor = (
         await session.execute(
-            select(Vendor).where(
-                Vendor.org_id == org_id, Vendor.display_name == name
-            )
+            select(Vendor).where(Vendor.org_id == org_id, Vendor.display_name == name)
         )
     ).scalar_one_or_none()
 
@@ -118,7 +116,7 @@ async def ingest_pipeline_output(
             display_name=name,
             entity_type=EntityType.UNKNOWN,
             org_id=org_id,
-            capture_enabled=False,   # this data comes from the pipeline, not capture
+            capture_enabled=False,  # this data comes from the pipeline, not capture
         )
         session.add(vendor)
         await session.flush()
@@ -134,9 +132,7 @@ async def ingest_pipeline_output(
         dedup = _dedup_key(vendor.id, url, today, metric.value)
 
         exists = (
-            await session.execute(
-                select(Signal.id).where(Signal.dedup_key == dedup)
-            )
+            await session.execute(select(Signal.id).where(Signal.dedup_key == dedup))
         ).scalar_one_or_none()
         if exists:
             continue
@@ -198,9 +194,9 @@ async def ingest_pipeline_output(
                 vendor_score_id=score.id,
                 vendor_id=vendor.id,
                 dimension=m,
-                raw_value=float(raw) * 10.0,     # same 0-10 -> 0-100 scaling
-                baseline=None,                   # NOT fabricated
-                z_score=None,                    # NOT fabricated
+                raw_value=float(raw) * 10.0,  # same 0-10 -> 0-100 scaling
+                baseline=None,  # NOT fabricated
+                z_score=None,  # NOT fabricated
                 anomaly_ratio=None,
                 contribution=float(raw) * 10.0,
                 weight_applied=1.0 / max(len(dimensions), 1),
@@ -218,12 +214,16 @@ async def ingest_pipeline_output(
         "vendor_id": str(vendor.id),
         "composite_0_100": composite_100,
         "signals_written": written,
-        "dimensions_scored": [DIMENSION_MAP[k].value for k in dimensions if k in DIMENSION_MAP],
+        "dimensions_scored": [
+            DIMENSION_MAP[k].value for k in dimensions if k in DIMENSION_MAP
+        ],
         "baseline_provided": False,
     }
 
 
-async def ingest_many(session: AsyncSession, org_id: uuid.UUID, outputs: list[dict]) -> list[dict]:
+async def ingest_many(
+    session: AsyncSession, org_id: uuid.UUID, outputs: list[dict]
+) -> list[dict]:
     results = []
     for o in outputs:
         results.append(await ingest_pipeline_output(session, org_id, o))

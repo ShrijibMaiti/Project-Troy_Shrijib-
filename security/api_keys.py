@@ -94,7 +94,9 @@ async def verify_key(session: AsyncSession, raw_key: str) -> ApiKeyContext:
     if row.expires_at is not None and row.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API key expired")
 
-    org = (await session.execute(select(Org).where(Org.id == row.org_id))).scalar_one_or_none()
+    org = (
+        await session.execute(select(Org).where(Org.id == row.org_id))
+    ).scalar_one_or_none()
     if org is None or not org.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Organisation inactive")
 
@@ -112,7 +114,9 @@ async def verify_key(session: AsyncSession, raw_key: str) -> ApiKeyContext:
     )
 
 
-async def revoke_key(session: AsyncSession, org_id: uuid.UUID, key_id: uuid.UUID) -> ApiKey:
+async def revoke_key(
+    session: AsyncSession, org_id: uuid.UUID, key_id: uuid.UUID
+) -> ApiKey:
     """Revoke, never delete — the audit trail needs the record."""
     row = (
         await session.execute(
@@ -129,7 +133,9 @@ async def list_keys(session: AsyncSession, org_id: uuid.UUID) -> list[ApiKey]:
     return list(
         (
             await session.execute(
-                select(ApiKey).where(ApiKey.org_id == org_id).order_by(ApiKey.created_at.desc())
+                select(ApiKey)
+                .where(ApiKey.org_id == org_id)
+                .order_by(ApiKey.created_at.desc())
             )
         ).scalars()
     )

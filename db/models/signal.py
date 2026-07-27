@@ -13,7 +13,6 @@ invalidates every chain that came before it. Decide once, on day one.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -24,7 +23,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -37,7 +35,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class SignalMetric(str, enum.Enum):
@@ -49,7 +47,7 @@ class SignalMetric(str, enum.Enum):
     SENTIMENT = "sentiment"
     NEWS_VOLUME = "news_volume"
     OPEN_ROLES = "open_roles"
-    FUNDING_EVENT = "funding_event"       # populated by Form D / Crunchbase
+    FUNDING_EVENT = "funding_event"  # populated by Form D / Crunchbase
     REGULATORY_FILING = "regulatory_filing"
 
 
@@ -137,7 +135,9 @@ class Signal(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
         CheckConstraint("row_hash ~ '^[0-9a-f]{64}$'", name="row_hash_format"),
         CheckConstraint("prev_hash ~ '^[0-9a-f]{64}$'", name="prev_hash_format"),
         # The workhorse index: "give me this vendor's timeline for this metric".
-        Index("ix_signals_vendor_metric_observed", "vendor_id", "metric", "observed_at"),
+        Index(
+            "ix_signals_vendor_metric_observed", "vendor_id", "metric", "observed_at"
+        ),
         Index("ix_signals_chain_seq", "chain_seq"),
     )
 

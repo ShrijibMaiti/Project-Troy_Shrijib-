@@ -11,6 +11,7 @@ Privilege shape, deliberately:
 Revision ID: 0005_domain8
 Revises: 0004_enum_lowercase
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -42,8 +43,12 @@ def upgrade() -> None:
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("key_hash ~ '^[0-9a-f]{64}$'", name=op.f("ck_api_keys_hash_format")),
-        sa.ForeignKeyConstraint(["org_id"], ["orgs.id"], name=op.f("fk_api_keys_org_id_orgs")),
+        sa.CheckConstraint(
+            "key_hash ~ '^[0-9a-f]{64}$'", name=op.f("ck_api_keys_hash_format")
+        ),
+        sa.ForeignKeyConstraint(
+            ["org_id"], ["orgs.id"], name=op.f("fk_api_keys_org_id_orgs")
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_api_keys")),
         sa.UniqueConstraint("key_hash", name=op.f("uq_api_keys_key_hash")),
     )
@@ -70,17 +75,29 @@ def upgrade() -> None:
         ),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["org_id"], ["orgs.id"], name=op.f("fk_api_cost_events_org_id_orgs")),
         sa.ForeignKeyConstraint(
-            ["vendor_id"], ["vendors.id"], name=op.f("fk_api_cost_events_vendor_id_vendors")
+            ["org_id"], ["orgs.id"], name=op.f("fk_api_cost_events_org_id_orgs")
+        ),
+        sa.ForeignKeyConstraint(
+            ["vendor_id"],
+            ["vendors.id"],
+            name=op.f("fk_api_cost_events_vendor_id_vendors"),
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_api_cost_events")),
     )
-    op.create_index("ix_cost_vendor_created", "api_cost_events", ["vendor_id", "created_at"])
-    op.create_index("ix_cost_provider_created", "api_cost_events", ["provider", "created_at"])
-    op.create_index(op.f("ix_api_cost_events_created_at"), "api_cost_events", ["created_at"])
+    op.create_index(
+        "ix_cost_vendor_created", "api_cost_events", ["vendor_id", "created_at"]
+    )
+    op.create_index(
+        "ix_cost_provider_created", "api_cost_events", ["provider", "created_at"]
+    )
+    op.create_index(
+        op.f("ix_api_cost_events_created_at"), "api_cost_events", ["created_at"]
+    )
     op.create_index(op.f("ix_api_cost_events_org_id"), "api_cost_events", ["org_id"])
-    op.create_index(op.f("ix_api_cost_events_vendor_id"), "api_cost_events", ["vendor_id"])
+    op.create_index(
+        op.f("ix_api_cost_events_vendor_id"), "api_cost_events", ["vendor_id"]
+    )
 
     op.create_table(
         "erasure_requests",
@@ -97,12 +114,18 @@ def upgrade() -> None:
         sa.Column("note", sa.Text(), nullable=True),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["org_id"], ["orgs.id"], name=op.f("fk_erasure_requests_org_id_orgs")),
+        sa.ForeignKeyConstraint(
+            ["org_id"], ["orgs.id"], name=op.f("fk_erasure_requests_org_id_orgs")
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_erasure_requests")),
     )
-    op.create_index(op.f("ix_erasure_requests_subject_ref"), "erasure_requests", ["subject_ref"])
+    op.create_index(
+        op.f("ix_erasure_requests_subject_ref"), "erasure_requests", ["subject_ref"]
+    )
     op.create_index(op.f("ix_erasure_requests_org_id"), "erasure_requests", ["org_id"])
-    op.create_index(op.f("ix_erasure_requests_created_at"), "erasure_requests", ["created_at"])
+    op.create_index(
+        op.f("ix_erasure_requests_created_at"), "erasure_requests", ["created_at"]
+    )
 
     # ---- Grants -------------------------------------------------------
     op.execute("GRANT SELECT, INSERT, UPDATE ON TABLE api_keys TO troy_app")
@@ -121,7 +144,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP TRIGGER IF EXISTS trg_api_cost_events_append_only ON api_cost_events")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_api_cost_events_append_only ON api_cost_events"
+    )
     op.drop_table("erasure_requests")
     op.drop_table("api_cost_events")
     op.drop_table("api_keys")

@@ -11,15 +11,15 @@
 
 import {
   aldermereDimensions, aldermereEventWeeks, aldermereHist, aldermereNarrative,
-  aldermereSignals, alerts as alertFixtures, compareRows, concentrationFindings,
-  evidenceData as evidenceFixtures, methodologyData as methodologyFixtures,
+  aldermereSignals, alerts as alertFixtures,
+  evidenceData as evidenceFixtures,
   registerChangelog as changelogFixtures, registerRows as registerFixtures,
   vendors as vendorFixtures,
 } from '@/data/fixtures';
 
 import type {
   AlertItem, ChainEvent, CompareRow, ConcentrationFinding, ChangelogEntry,
-  EvidenceData, MethodologyData, MethodologyLive, SeriesPoint, RegisterRow, Vendor, VendorDetail, VendorState,
+  EvidenceData, MethodologyLive, SeriesPoint, RegisterRow, Vendor, VendorDetail, VendorState,
   Confidence, Dimension, Signal, NarrativeSentence,
 } from '@/types/api';
 
@@ -180,6 +180,7 @@ export async function getVendorDetail(id: string): Promise<VendorDetail> {
     const vendor = mapVendor({ ...vendorRaw, composite: scoreRaw?.composite });
 
     const signals: Signal[] = (signalsRaw ?? []).map((s, i) => ({
+      id: s.id,
       n: s.chain_seq ?? i + 1,
       date: (s.event_date ?? s.observed_at ?? '').slice(0, 10),
       title: s.summary ?? '(no summary)',
@@ -325,7 +326,7 @@ export async function getMethodology(): Promise<MethodologyLive> {
   // Merge the two raw series into one date-indexed array for plotting.
   const raw = d.backtest_series ?? {};
   const byDate = new Map<string, SeriesPoint>();
-  for (const [vendor, block] of Object.entries<any>(raw)) {
+  for (const [, block] of Object.entries<any>(raw)) {
     const isFailed = block?.label === 'failed';
     for (const p of block?.score_series ?? []) {
       const row = byDate.get(p.date) ?? { date: p.date, failed: null, control: null };
@@ -491,6 +492,7 @@ export async function getCompare(): Promise<{
   }));
   return { rows, findings: d.findings ?? [], note: d.note ?? '' };
 }
+
 // ---- Gemma contract extraction (Domain 7 / integration #1) ---------------
 
 export interface ContractDraftOut {

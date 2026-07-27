@@ -25,10 +25,10 @@ from db.models.audit_log import AuditAction, AuditLog
 from db.models.vendor import Vendor
 from db.session import SessionFactory
 
-
 # ---------------------------------------------------------------------------
 # Guarded imports of Wrik's modules
 # ---------------------------------------------------------------------------
+
 
 def _try_import(path: str, name: str):
     try:
@@ -66,6 +66,7 @@ async def _audit(session, action, org_id, **kw) -> None:
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
+
 
 async def run_capture(ctx: dict, org_id: str | None = None) -> dict:
     """
@@ -151,7 +152,9 @@ async def capture_vendor(ctx: dict, vendor_id: str) -> dict:
                 v2.last_capture_at = datetime.now(timezone.utc)
                 v2.last_capture_ok = False
                 await s2.commit()
-            await publish(vendor.org_id, "job.failed", {"vendor_id": vendor_id, "error": str(exc)})
+            await publish(
+                vendor.org_id, "job.failed", {"vendor_id": vendor_id, "error": str(exc)}
+            )
             raise
 
         org_id = vendor.org_id
@@ -159,7 +162,11 @@ async def capture_vendor(ctx: dict, vendor_id: str) -> dict:
     if ok:
         await recompute_score(ctx, vendor_id)
 
-    await publish(org_id, "capture.finished", {"vendor_id": vendor_id, "written": written, **detail})
+    await publish(
+        org_id,
+        "capture.finished",
+        {"vendor_id": vendor_id, "written": written, **detail},
+    )
     return {"vendor_id": vendor_id, "ok": ok, "written": written, **detail}
 
 
@@ -188,7 +195,9 @@ async def recompute_score(ctx: dict, vendor_id: str) -> dict:
         if vendor is None:
             return {"error": "vendor not found"}
 
-        score = await score_vendor(session, vendor, weights=weights, thresholds=thresholds)
+        score = await score_vendor(
+            session, vendor, weights=weights, thresholds=thresholds
+        )
         await _audit(
             session,
             AuditAction.SCORE_COMPUTED,
@@ -275,9 +284,11 @@ async def export_register(ctx: dict, org_id: str, fmt: str = "pdf") -> dict:
     is immutable) and the fix for the original's 130-second cold export.
     """
     import uuid as _uuid
+
     from db.integrity.hash_chain import head_hash_for_export
     from db.models.export_artifact import ExportFormat, ExportKind
     from reporting import artifacts as art
+
     oid = _uuid.UUID(org_id)
     await publish(oid, "job.progress", {"stage": "export", "format": fmt, "pct": 10})
     async with SessionFactory() as session:
@@ -285,13 +296,15 @@ async def export_register(ctx: dict, org_id: str, fmt: str = "pdf") -> dict:
         # Everything that determines the output. Two exports with the same
         # input hash MUST produce identical bytes.
         from sqlalchemy import func as _f
+
         from db.models.contract import Contract as _C
         from db.models.score import VendorScore as _S
+
         max_score = (
             await session.execute(
-                select(_f.max(_S.computed_at)).join(
-                    Vendor, Vendor.id == _S.vendor_id
-                ).where(Vendor.org_id == oid)
+                select(_f.max(_S.computed_at))
+                .join(Vendor, Vendor.id == _S.vendor_id)
+                .where(Vendor.org_id == oid)
             )
         ).scalar_one_or_none()
         max_reg = (
@@ -311,24 +324,31 @@ async def export_register(ctx: dict, org_id: str, fmt: str = "pdf") -> dict:
         existing = await art.find_existing(session, oid, input_hash)
         if existing is not None:
             await publish(
-                oid, "job.done",
+                oid,
+                "job.done",
                 {"stage": "export", "artifact_id": str(existing.id), "cached": True},
             )
             return {
-                "org_id": org_id, "format": fmt, "cached": True,
-                "artifact_id": str(existing.id), "content_hash": existing.content_hash,
+                "org_id": org_id,
+                "format": fmt,
+                "cached": True,
+                "artifact_id": str(existing.id),
+                "content_hash": existing.content_hash,
             }
         await publish(oid, "job.progress", {"stage": "export", "pct": 40})
         if fmt == "its":
             from reporting.its_export.writer import write_its_register
+
             payload = await write_its_register(session, oid, fmt="csv")
             kind, ext, efmt = ExportKind.ITS_REGISTER, "zip", ExportFormat.ITS_CSV
         elif fmt == "its_json":
             from reporting.its_export.writer import write_its_register
+
             payload = await write_its_register(session, oid, fmt="json")
             kind, ext, efmt = ExportKind.ITS_REGISTER, "json", ExportFormat.ITS_JSON
         else:
             from reporting.pdf.evidence_pack import render_evidence_pack
+
             payload = await render_evidence_pack(session, oid)
             kind, ext, efmt = ExportKind.EVIDENCE_PACK, "pdf", ExportFormat.PDF
         await publish(oid, "job.progress", {"stage": "export", "pct": 80})
@@ -348,7 +368,8 @@ async def export_register(ctx: dict, org_id: str, fmt: str = "pdf") -> dict:
         )
         await session.commit()
     await publish(
-        oid, "job.done",
+        oid,
+        "job.done",
         {"stage": "export", "artifact_id": str(stored.id), "cached": stored.from_cache},
     )
     return {

@@ -31,10 +31,10 @@ load_dotenv()
 # Bump when the cache format changes in a backward-incompatible way.
 CACHE_SCHEMA_VERSION = "v1"
 
-DEFAULT_TTL = 60 * 60 * 6          # 6h  â€” general
+DEFAULT_TTL = 60 * 60 * 6  # 6h  â€” general
 INFERENCE_TTL = 60 * 60 * 24 * 30  # 30d â€” model outputs; expensive, stable
-SCORE_TTL = 60 * 15                # 15m â€” recomputed often
-VERIFY_TTL = 60 * 5                # 5m  â€” chain verification is expensive
+SCORE_TTL = 60 * 15  # 15m â€” recomputed often
+VERIFY_TTL = 60 * 5  # 5m  â€” chain verification is expensive
 
 _pool: aioredis.Redis | None = None
 
@@ -60,7 +60,7 @@ def get_redis() -> aioredis.Redis:
             decode_responses=True,
             max_connections=32,
             health_check_interval=30,
-            socket_connect_timeout=1,   # fail fast; a cache miss beats a stall
+            socket_connect_timeout=1,  # fail fast; a cache miss beats a stall
             socket_timeout=2,
             retry_on_timeout=False,
         )
@@ -82,6 +82,7 @@ def _hash(value: str) -> str:
 # Key builders
 # ---------------------------------------------------------------------------
 
+
 def inference_key(model_id: str, prompt_hash: str, text: str) -> str:
     """
     Cache key for a model call.
@@ -89,7 +90,9 @@ def inference_key(model_id: str, prompt_hash: str, text: str) -> str:
     model_id AND prompt_hash are both in the key. Change either and you get a
     fresh call rather than a stale answer attributed to the wrong version.
     """
-    return f"troy:{CACHE_SCHEMA_VERSION}:infer:{model_id}:{prompt_hash[:16]}:{_hash(text)}"
+    return (
+        f"troy:{CACHE_SCHEMA_VERSION}:infer:{model_id}:{prompt_hash[:16]}:{_hash(text)}"
+    )
 
 
 def score_key(vendor_id: str, weights_version: str) -> str:
@@ -107,6 +110,7 @@ def chain_verify_key() -> str:
 # ---------------------------------------------------------------------------
 # Operations
 # ---------------------------------------------------------------------------
+
 
 async def cache_get(key: str) -> Any | None:
     """

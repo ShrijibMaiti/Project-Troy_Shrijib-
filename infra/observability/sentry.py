@@ -14,9 +14,18 @@ import os
 from typing import Any
 
 SCRUB_KEYS = {
-    "password", "secret", "token", "api_key", "authorization",
-    "shred_master_key", "clerk_secret_key", "database_url",
-    "exec_name", "subject_name", "excerpt", "narrative_md",
+    "password",
+    "secret",
+    "token",
+    "api_key",
+    "authorization",
+    "shred_master_key",
+    "clerk_secret_key",
+    "database_url",
+    "exec_name",
+    "subject_name",
+    "excerpt",
+    "narrative_md",
 }
 
 

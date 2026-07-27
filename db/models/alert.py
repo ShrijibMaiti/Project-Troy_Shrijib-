@@ -8,7 +8,6 @@ threshold ("this setting would have fired N times").
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -17,7 +16,6 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -29,7 +27,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class AlertSeverity(str, enum.Enum):

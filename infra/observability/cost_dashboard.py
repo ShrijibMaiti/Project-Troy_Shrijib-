@@ -104,13 +104,13 @@ async def build_report(days: int = 30, org_id: uuid.UUID | None = None) -> CostR
         ).all()
 
         names = dict(
-            (
-                await session.execute(select(Vendor.id, Vendor.display_name))
-            ).all()
+            (await session.execute(select(Vendor.id, Vendor.display_name))).all()
         )
         active = (
             await session.execute(
-                select(func.count(Vendor.id)).where(Vendor.is_active, Vendor.capture_enabled)
+                select(func.count(Vendor.id)).where(
+                    Vendor.is_active, Vendor.capture_enabled
+                )
             )
         ).scalar_one() or 0
 

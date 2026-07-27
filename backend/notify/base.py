@@ -42,7 +42,9 @@ def format_headline(alert: Alert, vendor_name: str) -> str:
     )
 
 
-async def dispatch(alert: Alert, vendor_name: str = "vendor", base_url: str = "") -> list[str]:
+async def dispatch(
+    alert: Alert, vendor_name: str = "vendor", base_url: str = ""
+) -> list[str]:
     """
     Returns the channels that accepted. Never raises: a failed notification
     must not fail the scoring pipeline.

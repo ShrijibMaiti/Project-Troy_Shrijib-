@@ -7,6 +7,7 @@ someone remembers to run.
 Revision ID: 0002_append_only
 Revises: 0001_initial
 """
+
 from __future__ import annotations
 
 from pathlib import Path

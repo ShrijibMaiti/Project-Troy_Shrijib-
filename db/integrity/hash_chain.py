@@ -20,10 +20,10 @@ every hash ever computed.
 """
 
 from __future__ import annotations
-import uuid
 
 import hashlib
 import json
+import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import select, text
@@ -68,9 +68,11 @@ async def _acquire_chain_lock(session: AsyncSession) -> None:
 
 async def get_head(session: AsyncSession) -> tuple[int, str]:
     """Returns (chain_seq, row_hash) of the newest link, or (0, GENESIS)."""
-    stmt = select(Signal.chain_seq, Signal.row_hash).order_by(
-        Signal.chain_seq.desc()
-    ).limit(1)
+    stmt = (
+        select(Signal.chain_seq, Signal.row_hash)
+        .order_by(Signal.chain_seq.desc())
+        .limit(1)
+    )
     row = (await session.execute(stmt)).first()
     if row is None:
         return 0, GENESIS_HASH
@@ -152,14 +154,15 @@ async def verify_chain(
     if start_seq > 0:
         anchor = (
             await session.execute(
-                select(Signal.row_hash)
-                .where(Signal.chain_seq == start_seq)
-                .limit(1)
+                select(Signal.row_hash).where(Signal.chain_seq == start_seq).limit(1)
             )
         ).scalar_one_or_none()
         if anchor is None:
             return ChainVerificationResult(
-                ok=False, checked=0, head_seq=0, head_hash=GENESIS_HASH,
+                ok=False,
+                checked=0,
+                head_seq=0,
+                head_hash=GENESIS_HASH,
                 reason=f"anchor chain_seq={start_seq} not found",
             )
         prev_hash = anchor
@@ -178,17 +181,25 @@ async def verify_chain(
         for sig in rows:
             if sig.prev_hash != prev_hash:
                 return ChainVerificationResult(
-                    ok=False, checked=checked, head_seq=head_seq, head_hash=head_hash,
-                    first_break_seq=sig.chain_seq, first_break_id=str(sig.id),
+                    ok=False,
+                    checked=checked,
+                    head_seq=head_seq,
+                    head_hash=head_hash,
+                    first_break_seq=sig.chain_seq,
+                    first_break_id=str(sig.id),
                     reason="prev_hash does not match previous row_hash "
-                           "(row inserted, deleted or reordered)",
+                    "(row inserted, deleted or reordered)",
                 )
 
             expected = compute_row_hash(sig.hash_payload(), sig.prev_hash)
             if expected != sig.row_hash:
                 return ChainVerificationResult(
-                    ok=False, checked=checked, head_seq=head_seq, head_hash=head_hash,
-                    first_break_seq=sig.chain_seq, first_break_id=str(sig.id),
+                    ok=False,
+                    checked=checked,
+                    head_seq=head_seq,
+                    head_hash=head_hash,
+                    first_break_seq=sig.chain_seq,
+                    first_break_id=str(sig.id),
                     reason="row_hash does not match content (row was modified)",
                 )
 

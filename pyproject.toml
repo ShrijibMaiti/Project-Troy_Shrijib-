@@ -1,0 +1,28 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+# Deliberately narrow: correctness rules, not style opinions. Formatting is
+# ruff-format's job; these are for finding real defects.
+select = [
+    "E4",    # imports
+    "E7",    # statement errors
+    "E9",    # syntax / runtime errors
+    "F",     # pyflakes — undefined names, unused imports
+    "I",     # import sorting
+    "B",     # bugbear — real footguns
+    "ASYNC", # async correctness
+]
+
+ignore = [
+    # FastAPI dependency injection puts Query()/File() in argument defaults.
+    "B008",
+    # Scripts must call load_dotenv() before importing modules that read env
+    # at import time. The import order is load-bearing, not an oversight.
+    "E402",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["ASYNC230"]     # one-shot CLIs; blocking file reads are fine
+"db/migrations/*" = ["E501"]   # generated SQL strings

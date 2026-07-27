@@ -7,7 +7,6 @@ meaningless without knowing who edited what.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -15,7 +14,6 @@ import uuid
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
-    Enum,
     ForeignKey,
     Index,
     String,
@@ -24,14 +22,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class OrgRole(str, enum.Enum):
-    OWNER = "owner"        # billing + everything
-    ADMIN = "admin"        # manage vendors, users, thresholds
-    ANALYST = "analyst"    # dispute signals, export, acknowledge alerts
-    VIEWER = "viewer"      # read-only
+    OWNER = "owner"  # billing + everything
+    ADMIN = "admin"  # manage vendors, users, thresholds
+    ANALYST = "analyst"  # dispute signals, export, acknowledge alerts
+    VIEWER = "viewer"  # read-only
 
 
 class Org(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
@@ -53,9 +51,7 @@ class Org(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     users = relationship("User", back_populates="org", lazy="raise")
 
     __table_args__ = (
-        CheckConstraint(
-            "lei IS NULL OR lei ~ '^[A-Z0-9]{20}$'", name="org_lei_format"
-        ),
+        CheckConstraint("lei IS NULL OR lei ~ '^[A-Z0-9]{20}$'", name="org_lei_format"),
     )
 
 

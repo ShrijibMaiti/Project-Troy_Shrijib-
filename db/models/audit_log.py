@@ -9,17 +9,16 @@ Also append-only. Yes, the audit log has its own audit constraints.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Index, String, Text
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class AuditAction(str, enum.Enum):
@@ -59,7 +58,9 @@ class AuditLog(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     entity_type: Mapped[str | None] = mapped_column(String(64))
-    entity_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), index=True)
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), index=True
+    )
 
     # Small structured context. Never the full payload — a hash of it instead,
     # so the log stays small and can't leak excerpt text.

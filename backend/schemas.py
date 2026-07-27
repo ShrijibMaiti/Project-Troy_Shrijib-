@@ -26,6 +26,7 @@ class ORMModel(BaseModel):
 # Vendors
 # ---------------------------------------------------------------------------
 
+
 class VendorCreate(BaseModel):
     legal_name: str
     display_name: str
@@ -75,6 +76,7 @@ class VendorOut(ORMModel):
 
 class VendorFleetItem(VendorOut):
     """Fleet row: vendor + current score + freshness."""
+
     composite: float | None = None
     delta: float | None = None
     open_alerts: int = 0
@@ -87,6 +89,7 @@ class VendorFleetItem(VendorOut):
 # ---------------------------------------------------------------------------
 # Signals
 # ---------------------------------------------------------------------------
+
 
 class SignalOut(ORMModel):
     id: uuid.UUID
@@ -140,6 +143,7 @@ class DisputeOut(BaseModel):
 # Scores
 # ---------------------------------------------------------------------------
 
+
 class DimensionOut(ORMModel):
     dimension: str
     raw_value: float | None
@@ -175,6 +179,7 @@ class ScorePoint(BaseModel):
 # Alerts
 # ---------------------------------------------------------------------------
 
+
 class AlertOut(ORMModel):
     id: uuid.UUID
     vendor_id: uuid.UUID
@@ -198,6 +203,7 @@ class ThresholdPreviewOut(BaseModel):
     instead of theoretical — the fix for alert fatigue is a number you can see
     before you commit to it.
     """
+
     candidate_threshold: float
     current_threshold: float | None
     would_fire: int
@@ -211,6 +217,7 @@ class ThresholdPreviewOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Narratives
 # ---------------------------------------------------------------------------
+
 
 class CitationOut(BaseModel):
     index: int
@@ -246,6 +253,7 @@ class NarrativeOut(ORMModel):
 # Register / contracts
 # ---------------------------------------------------------------------------
 
+
 class ContractIn(BaseModel):
     contractual_arrangement_ref: str
     provider_lei: str | None = None
@@ -280,6 +288,7 @@ class ContractOut(ContractIn, ORMModel):
 
 class RegisterRow(BaseModel):
     """The join: static ITS fields + live monitoring signal."""
+
     vendor: VendorOut
     contract: ContractOut | None
     composite: float | None
@@ -291,6 +300,7 @@ class RegisterRow(BaseModel):
 # ---------------------------------------------------------------------------
 # Trust
 # ---------------------------------------------------------------------------
+
 
 class ChainVerifyOut(BaseModel):
     ok: bool
@@ -308,6 +318,7 @@ class AuditMetricsOut(BaseModel):
     Two separate honest numbers. The original conflated marker count with
     claim count and only ever proved narrative→row.
     """
+
     narrative_resolution_pct: float | None
     distinct_claims: int
     distinct_citations: int
@@ -334,6 +345,7 @@ class AuditLogOut(ORMModel):
 # Methodology
 # ---------------------------------------------------------------------------
 
+
 class MethodologyOut(BaseModel):
     weights: dict[str, Any] | None
     thresholds: dict[str, Any] | None
@@ -347,6 +359,7 @@ class MethodologyOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Compare / health / jobs
 # ---------------------------------------------------------------------------
+
 
 class CompareCell(BaseModel):
     vendor_id: uuid.UUID

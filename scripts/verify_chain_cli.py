@@ -32,7 +32,9 @@ async def main() -> int:
 
     print(json.dumps(result.as_dict(), indent=2))
     if result.ok:
-        print(f"\nCHAIN VERIFIED — {result.checked} rows, head {result.head_hash[:16]}…")
+        print(
+            f"\nCHAIN VERIFIED — {result.checked} rows, head {result.head_hash[:16]}…"
+        )
         return 0
     print(f"\nCHAIN BROKEN at chain_seq={result.first_break_seq}: {result.reason}")
     return 1

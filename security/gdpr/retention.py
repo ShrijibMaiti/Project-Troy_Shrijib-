@@ -123,9 +123,13 @@ if __name__ == "__main__":
     import json
 
     p = argparse.ArgumentParser(description="Enforce PII retention policy")
-    p.add_argument("--execute", action="store_true", help="actually shred (default: dry run)")
+    p.add_argument(
+        "--execute", action="store_true", help="actually shred (default: dry run)"
+    )
     p.add_argument("--days", type=int, default=PII_RETENTION_DAYS)
     a = p.parse_args()
 
-    report = asyncio.run(enforce_retention(dry_run=not a.execute, retention_days=a.days))
+    report = asyncio.run(
+        enforce_retention(dry_run=not a.execute, retention_days=a.days)
+    )
     print(json.dumps(report.as_dict(), indent=2))

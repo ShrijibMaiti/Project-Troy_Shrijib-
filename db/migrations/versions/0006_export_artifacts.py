@@ -6,6 +6,7 @@ break the point of having it.
 Revision ID: 0006_export_artifacts
 Revises: 0005_domain8
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -25,7 +26,9 @@ def upgrade() -> None:
         sa.Column("vendor_id", sa.UUID(), nullable=True),
         sa.Column(
             "kind",
-            sa.Enum("evidence_pack", "vendor_report", "its_register", name="export_kind"),
+            sa.Enum(
+                "evidence_pack", "vendor_report", "its_register", name="export_kind"
+            ),
             nullable=False,
         ),
         sa.Column(
@@ -43,26 +46,48 @@ def upgrade() -> None:
         sa.Column("superseded", sa.Boolean(), nullable=False),
         sa.Column("register_version", sa.Integer(), nullable=True),
         sa.Column(
-            "detail", postgresql.JSONB(astext_type=sa.Text()), server_default="{}", nullable=False
+            "detail",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default="{}",
+            nullable=False,
         ),
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint(
-            "content_hash ~ '^[0-9a-f]{64}$'", name=op.f("ck_export_artifacts_content_hash_format")
+            "content_hash ~ '^[0-9a-f]{64}$'",
+            name=op.f("ck_export_artifacts_content_hash_format"),
         ),
-        sa.ForeignKeyConstraint(["org_id"], ["orgs.id"], name=op.f("fk_export_artifacts_org_id_orgs")),
         sa.ForeignKeyConstraint(
-            ["vendor_id"], ["vendors.id"], name=op.f("fk_export_artifacts_vendor_id_vendors")
+            ["org_id"], ["orgs.id"], name=op.f("fk_export_artifacts_org_id_orgs")
+        ),
+        sa.ForeignKeyConstraint(
+            ["vendor_id"],
+            ["vendors.id"],
+            name=op.f("fk_export_artifacts_vendor_id_vendors"),
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_export_artifacts")),
-        sa.UniqueConstraint("content_hash", name=op.f("uq_export_artifacts_content_hash")),
+        sa.UniqueConstraint(
+            "content_hash", name=op.f("uq_export_artifacts_content_hash")
+        ),
     )
-    op.create_index("ix_export_org_kind_generated", "export_artifacts", ["org_id", "kind", "generated_at"])
+    op.create_index(
+        "ix_export_org_kind_generated",
+        "export_artifacts",
+        ["org_id", "kind", "generated_at"],
+    )
     op.create_index(op.f("ix_export_artifacts_org_id"), "export_artifacts", ["org_id"])
-    op.create_index(op.f("ix_export_artifacts_vendor_id"), "export_artifacts", ["vendor_id"])
-    op.create_index(op.f("ix_export_artifacts_input_hash"), "export_artifacts", ["input_hash"])
-    op.create_index(op.f("ix_export_artifacts_generated_at"), "export_artifacts", ["generated_at"])
-    op.create_index(op.f("ix_export_artifacts_created_at"), "export_artifacts", ["created_at"])
+    op.create_index(
+        op.f("ix_export_artifacts_vendor_id"), "export_artifacts", ["vendor_id"]
+    )
+    op.create_index(
+        op.f("ix_export_artifacts_input_hash"), "export_artifacts", ["input_hash"]
+    )
+    op.create_index(
+        op.f("ix_export_artifacts_generated_at"), "export_artifacts", ["generated_at"]
+    )
+    op.create_index(
+        op.f("ix_export_artifacts_created_at"), "export_artifacts", ["created_at"]
+    )
 
     # UPDATE is permitted only to set `superseded`. Everything else is frozen â€”
     # enforced by the trigger below, not by convention.
@@ -105,8 +130,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP TRIGGER IF EXISTS trg_export_artifacts_no_delete ON export_artifacts")
-    op.execute("DROP TRIGGER IF EXISTS trg_export_artifacts_supersede_only ON export_artifacts")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_export_artifacts_no_delete ON export_artifacts"
+    )
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_export_artifacts_supersede_only ON export_artifacts"
+    )
     op.execute("DROP FUNCTION IF EXISTS troy_export_supersede_only()")
     op.drop_table("export_artifacts")
     for t in ("export_kind", "export_format"):

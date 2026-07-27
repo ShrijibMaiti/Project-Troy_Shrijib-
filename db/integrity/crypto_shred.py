@@ -84,7 +84,9 @@ class ShreddedField(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
         PGUUID(as_uuid=True), nullable=False, index=True
     )
     subject_ref: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    field_name: Mapped[str] = mapped_column(String(64), nullable=False)  # e.g. "exec_name"
+    field_name: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )  # e.g. "exec_name"
 
     ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
@@ -93,6 +95,7 @@ class ShreddedField(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
 # --------------------------------------------------------------------------
 # Key management
 # --------------------------------------------------------------------------
+
 
 def _wrap(data_key: bytes) -> tuple[bytes, bytes]:
     nonce = os.urandom(NONCE_BYTES)
@@ -131,6 +134,7 @@ async def get_or_create_subject_key(
 # --------------------------------------------------------------------------
 # Encrypt / decrypt
 # --------------------------------------------------------------------------
+
 
 async def encrypt_field(
     session: AsyncSession,
@@ -179,6 +183,7 @@ async def decrypt_field(session: AsyncSession, field: ShreddedField) -> str | No
 # --------------------------------------------------------------------------
 # THE ERASURE
 # --------------------------------------------------------------------------
+
 
 async def erase_subject(session: AsyncSession, subject_ref: str) -> bool:
     """

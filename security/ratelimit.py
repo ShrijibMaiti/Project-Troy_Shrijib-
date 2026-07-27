@@ -85,12 +85,16 @@ async def check(identity: str, limit_per_minute: int, cost: int = 1) -> RateLimi
     try:
         r = get_redis()
         try:
-            res = await r.evalsha(await _sha(), 1, key, limit_per_minute, refill, now, cost)
+            res = await r.evalsha(
+                await _sha(), 1, key, limit_per_minute, refill, now, cost
+            )
         except Exception:
             # Script cache flushed (e.g. Redis restart) — reload and retry once.
             global _script_sha
             _script_sha = None
-            res = await r.eval(TOKEN_BUCKET_LUA, 1, key, limit_per_minute, refill, now, cost)
+            res = await r.eval(
+                TOKEN_BUCKET_LUA, 1, key, limit_per_minute, refill, now, cost
+            )
     except Exception:
         return RateLimitResult(True, float(limit_per_minute), limit_per_minute, 0)
 
@@ -101,7 +105,9 @@ async def check(identity: str, limit_per_minute: int, cost: int = 1) -> RateLimi
     return RateLimitResult(allowed, remaining, limit_per_minute, retry_after)
 
 
-async def enforce(identity: str, limit_per_minute: int, cost: int = 1) -> RateLimitResult:
+async def enforce(
+    identity: str, limit_per_minute: int, cost: int = 1
+) -> RateLimitResult:
     result = await check(identity, limit_per_minute, cost)
     if not result.allowed:
         raise HTTPException(

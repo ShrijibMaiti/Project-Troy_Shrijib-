@@ -90,7 +90,9 @@ async def score_as_of(
         )
     ).scalar_one_or_none()
     if s is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No score at or before that time")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "No score at or before that time"
+        )
     return s
 
 

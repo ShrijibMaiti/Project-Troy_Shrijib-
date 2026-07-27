@@ -11,7 +11,6 @@ compliance/its_mapping.md can be checked against this file line by line.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -21,7 +20,6 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
-    Enum,
     ForeignKey,
     Integer,
     String,
@@ -31,7 +29,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class SubstitutabilityRating(str, enum.Enum):
@@ -52,7 +50,9 @@ class Contract(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     # ---- Identification --------------------------------------------------
-    contractual_arrangement_ref: Mapped[str] = mapped_column(String(128), nullable=False)
+    contractual_arrangement_ref: Mapped[str] = mapped_column(
+        String(128), nullable=False
+    )
     provider_lei: Mapped[str | None] = mapped_column(String(20), index=True)
     provider_legal_name: Mapped[str] = mapped_column(String(512), nullable=False)
     provider_country: Mapped[str | None] = mapped_column(String(2))  # ISO 3166-1

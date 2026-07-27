@@ -46,9 +46,7 @@ async def chain_verify(
             return ChainVerifyOut(**cached)
 
     result = await verify_chain(session)
-    out = ChainVerifyOut(
-        **result.as_dict(), verified_at=datetime.now(timezone.utc)
-    )
+    out = ChainVerifyOut(**result.as_dict(), verified_at=datetime.now(timezone.utc))
     await cache_set(key, out.model_dump(mode="json"), ttl=VERIFY_TTL)
 
     await write_audit(
@@ -135,8 +133,10 @@ async def audit_log(
     if action:
         try:
             stmt = stmt.where(AuditLog.action == AuditAction(action))
-        except ValueError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Unknown action '{action}'")
+        except ValueError as exc:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, f"Unknown action '{action}'"
+            ) from exc
     return list((await session.execute(stmt)).scalars())
 
 

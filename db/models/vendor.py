@@ -11,7 +11,6 @@ decision satisfies both the identity problem and the register schema.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -22,7 +21,6 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     String,
@@ -31,7 +29,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class EntityType(str, enum.Enum):
@@ -107,12 +105,8 @@ class Vendor(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
 
     __table_args__ = (
         # LEI is exactly 20 alphanumeric characters when present.
-        CheckConstraint(
-            "lei IS NULL OR lei ~ '^[A-Z0-9]{20}$'", name="lei_format"
-        ),
-        CheckConstraint(
-            "cik IS NULL OR cik ~ '^[0-9]{1,10}$'", name="cik_format"
-        ),
+        CheckConstraint("lei IS NULL OR lei ~ '^[A-Z0-9]{20}$'", name="lei_format"),
+        CheckConstraint("cik IS NULL OR cik ~ '^[0-9]{1,10}$'", name="cik_format"),
         Index("ix_vendors_org_active", "org_id", "is_active"),
     )
 

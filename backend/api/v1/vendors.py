@@ -8,7 +8,7 @@ no constant anywhere in this repo naming a vendor.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
@@ -129,9 +129,9 @@ async def draft_vendor_profile(
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             f"Profiling unavailable ({exc}). Enter the fields manually.",
-        )
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 
 @router.get("/{vendor_id}", response_model=VendorOut)
@@ -141,9 +141,7 @@ async def get_vendor(vendor_id: uuid.UUID, session: DB, org: CurrentOrg) -> Vend
 
 
 @router.post("", response_model=VendorOut, status_code=status.HTTP_201_CREATED)
-async def create_vendor(
-    body: VendorCreate, session: DB, org: Writer
-) -> Vendor:
+async def create_vendor(body: VendorCreate, session: DB, org: Writer) -> Vendor:
     if body.lei:
         dupe = (
             await session.execute(select(Vendor).where(Vendor.lei == body.lei))
@@ -196,9 +194,7 @@ async def update_vendor(
 
 
 @router.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def deactivate_vendor(
-    vendor_id: uuid.UUID, session: DB, org: Admin
-) -> None:
+async def deactivate_vendor(vendor_id: uuid.UUID, session: DB, org: Admin) -> None:
     """
     Deactivate, never delete. Signals are append-only evidence and the vendor
     row is their parent — removing it would orphan the chain.

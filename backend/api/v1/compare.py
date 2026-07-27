@@ -16,8 +16,14 @@ from sqlalchemy.orm import selectinload
 
 from backend.deps import DB, CurrentOrg
 from backend.schemas import (
-    CompareCell, CompareOut, ConcentrationCell, ConcentrationFinding,
-    ConcentrationOut, ConcentrationRow, ScorePoint, VendorOut,
+    CompareCell,
+    CompareOut,
+    ConcentrationCell,
+    ConcentrationFinding,
+    ConcentrationOut,
+    ConcentrationRow,
+    ScorePoint,
+    VendorOut,
 )
 from db.models.score import VendorScore
 from db.models.vendor import Vendor
@@ -77,7 +83,9 @@ async def compare(
     matrix: list[CompareCell] = []
     for s in scores:
         for d in s.dimensions:
-            name = d.dimension.value if hasattr(d.dimension, "value") else str(d.dimension)
+            name = (
+                d.dimension.value if hasattr(d.dimension, "value") else str(d.dimension)
+            )
             if name not in dims:
                 dims.append(name)
             matrix.append(
@@ -215,10 +223,18 @@ async def concentration(session: DB, org: CurrentOrg) -> ConcentrationOut:
             vendor_id=v.id,
             name=v.display_name,
             score=scores.get(v.id),
-            cloud=ConcentrationCell(value=raw[v.id]["cloud"], level=level("cloud", raw[v.id]["cloud"])),
-            region=ConcentrationCell(value=raw[v.id]["region"], level=level("region", raw[v.id]["region"])),
-            kyc=ConcentrationCell(value=raw[v.id]["kyc"], level=level("kyc", raw[v.id]["kyc"])),
-            sector=ConcentrationCell(value=raw[v.id]["sector"], level=level("sector", raw[v.id]["sector"])),
+            cloud=ConcentrationCell(
+                value=raw[v.id]["cloud"], level=level("cloud", raw[v.id]["cloud"])
+            ),
+            region=ConcentrationCell(
+                value=raw[v.id]["region"], level=level("region", raw[v.id]["region"])
+            ),
+            kyc=ConcentrationCell(
+                value=raw[v.id]["kyc"], level=level("kyc", raw[v.id]["kyc"])
+            ),
+            sector=ConcentrationCell(
+                value=raw[v.id]["sector"], level=level("sector", raw[v.id]["sector"])
+            ),
             has_contract=v.id in contracts,
         )
         for v in vendors
@@ -229,9 +245,21 @@ async def concentration(session: DB, org: CurrentOrg) -> ConcentrationOut:
     findings: list[ConcentrationFinding] = []
 
     for col, label, why in (
-        ("cloud", "SHARE A HOSTING PROVIDER", "A single provider incident correlates these exposures simultaneously."),
-        ("kyc", "SHARE A FOURTH-PARTY SUB-PROCESSOR", "This dependency appears in no single vendor's own register — only the join surfaces it."),
-        ("region", "CONCENTRATED IN ONE DATA REGION", "A region-level regulatory or infrastructural event touches all of them at once."),
+        (
+            "cloud",
+            "SHARE A HOSTING PROVIDER",
+            "A single provider incident correlates these exposures simultaneously.",
+        ),
+        (
+            "kyc",
+            "SHARE A FOURTH-PARTY SUB-PROCESSOR",
+            "This dependency appears in no single vendor's own register — only the join surfaces it.",
+        ),
+        (
+            "region",
+            "CONCENTRATED IN ONE DATA REGION",
+            "A region-level regulatory or infrastructural event touches all of them at once.",
+        ),
     ):
         if not counts[col]:
             continue
@@ -239,7 +267,11 @@ async def concentration(session: DB, org: CurrentOrg) -> ConcentrationOut:
         if n < 2:
             continue
         names = [r.name for r in rows if getattr(r, col).value == value]
-        elevated = [r.name for r in rows if getattr(r, col).value == value and (r.score or 0) >= 40]
+        elevated = [
+            r.name
+            for r in rows
+            if getattr(r, col).value == value and (r.score or 0) >= 40
+        ]
         body = f"{', '.join(names)} on {value}. {why}"
         if elevated:
             body += f" {', '.join(elevated)} {'is' if len(elevated) == 1 else 'are'} already elevated."

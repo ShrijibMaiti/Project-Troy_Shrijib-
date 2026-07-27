@@ -76,9 +76,9 @@ async def profile_vendor(
     raw = await gemma.generate_json(
         SYSTEM_PROMPT,
         USER_TEMPLATE.format(name=clean),
-        model=gemma.model_for("large"),   # needs world knowledge about real companies
+        model=gemma.model_for("large"),  # needs world knowledge about real companies
         temperature=0.2,
-        max_tokens=4096,   # Gemma 4 thinks unconditionally; thoughts consume this budget
+        max_tokens=4096,  # Gemma 4 thinks unconditionally; thoughts consume this budget
         session=session,
         org_id=org_id,
         operation="vendor_profile",
@@ -86,7 +86,14 @@ async def profile_vendor(
     if raw is None:
         raise ProfileUnavailable("Gemma returned no usable response")
 
-    valid_types = {"public_us", "public_eu", "private", "subsidiary", "government", "unknown"}
+    valid_types = {
+        "public_us",
+        "public_eu",
+        "private",
+        "subsidiary",
+        "government",
+        "unknown",
+    }
     et = str(raw.get("entity_type", "unknown")).lower()
 
     def as_list(v) -> list[str]:

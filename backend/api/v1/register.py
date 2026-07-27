@@ -111,9 +111,7 @@ async def register_rows(session: DB, org: CurrentOrg) -> list[RegisterRow]:
 
 
 @router.get("/contract/{vendor_id}", response_model=ContractOut)
-async def get_contract(
-    vendor_id: uuid.UUID, session: DB, org: CurrentOrg
-) -> Contract:
+async def get_contract(vendor_id: uuid.UUID, session: DB, org: CurrentOrg) -> Contract:
     c = (
         await session.execute(
             select(Contract).where(
@@ -216,15 +214,17 @@ async def export_register_sync(
     queue dependency. The job endpoint remains for production; this is the
     demo/immediate path.
     """
-    import uuid as _uuid
     from datetime import datetime, timezone
-    from sqlalchemy import func as _f, select as _select
+
+    from sqlalchemy import func as _f
+    from sqlalchemy import select as _select
+
     from db.integrity.hash_chain import head_hash_for_export
     from db.models.contract import Contract as _C
-    from db.models.export_artifact import ExportFormat, ExportKind
     from db.models.score import VendorScore as _S
     from db.models.vendor import Vendor as _V
     from reporting import artifacts as art
+
     oid = org.org_id
     head = await head_hash_for_export(session)
     max_score = (
@@ -260,10 +260,12 @@ async def export_register_sync(
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     if fmt == "its":
         from reporting.its_export.writer import write_its_register
+
         payload = await write_its_register(session, oid, fmt="csv")
         kind, ext, efmt = ExportKind.ITS_REGISTER, "zip", ExportFormat.ITS_CSV
     else:
         from reporting.pdf.evidence_pack import render_evidence_pack
+
         payload = await render_evidence_pack(session, oid)
         kind, ext, efmt = ExportKind.EVIDENCE_PACK, "pdf", ExportFormat.PDF
     stored = await art.store(
@@ -335,9 +337,9 @@ async def extract_contract_fields(
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             f"Automatic extraction unavailable ({exc}). Enter the fields manually.",
-        )
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     finally:
         del payload  # do not retain the document
 
@@ -405,6 +407,8 @@ def _completeness(c: Contract | None) -> float:
     present = 0
     for f in ITS_REQUIRED:
         v = getattr(c, f, None)
-        if v not in (None, "", [], False) or (f == "exit_plan_exists" and v is not None):
+        if v not in (None, "", [], False) or (
+            f == "exit_plan_exists" and v is not None
+        ):
             present += 1
     return round(100 * present / len(ITS_REQUIRED), 1)

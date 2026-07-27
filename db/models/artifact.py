@@ -15,7 +15,6 @@ stored artifact.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import uuid
 from datetime import datetime

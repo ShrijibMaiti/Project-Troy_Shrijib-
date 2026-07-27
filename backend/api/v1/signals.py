@@ -13,7 +13,6 @@ row. The original signal is never touched. That is why the UI must say
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select, text
@@ -72,19 +71,23 @@ async def get_signal(
     signal_id: uuid.UUID, session: DB, org: CurrentOrg
 ) -> SignalTimelineItem:
     row = (
-        await session.execute(
-            text(
-                """
+        (
+            await session.execute(
+                text(
+                    """
                 SELECT t.*, e.text AS excerpt_text
                 FROM signal_timeline t
                 LEFT JOIN excerpts e ON e.id = t.excerpt_id
                 JOIN vendors v ON v.id = t.vendor_id
                 WHERE t.id = CAST(:sid AS uuid) AND v.org_id = CAST(:oid AS uuid)
                 """
-            ),
-            {"sid": str(signal_id), "oid": str(org.org_id)},
+                ),
+                {"sid": str(signal_id), "oid": str(org.org_id)},
+            )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Signal not found")
     return SignalTimelineItem(**dict(row))
@@ -175,9 +178,7 @@ async def dispute_signal(
 async def _assert_owned(session, org, vendor_id: uuid.UUID) -> None:
     ok = (
         await session.execute(
-            select(Vendor.id).where(
-                Vendor.id == vendor_id, Vendor.org_id == org.org_id
-            )
+            select(Vendor.id).where(Vendor.id == vendor_id, Vendor.org_id == org.org_id)
         )
     ).scalar_one_or_none()
     if ok is None:

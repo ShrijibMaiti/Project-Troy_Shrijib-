@@ -9,8 +9,9 @@ param, because a client-supplied org id is an IDOR waiting to happen.
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Annotated, AsyncGenerator
+from typing import Annotated
 
 import redis.asyncio as aioredis
 from fastapi import Depends, Header, HTTPException, status
@@ -22,10 +23,10 @@ from db.cache import get_redis
 from db.models.org import Org, OrgRole, User
 from db.session import SessionFactory
 
-
 # ---------------------------------------------------------------------------
 # Session
 # ---------------------------------------------------------------------------
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionFactory() as session:
@@ -44,6 +45,7 @@ DB = Annotated[AsyncSession, Depends(get_db)]
 # Redis
 # ---------------------------------------------------------------------------
 
+
 async def get_cache() -> aioredis.Redis:
     return get_redis()
 
@@ -55,11 +57,12 @@ Cache = Annotated[aioredis.Redis, Depends(get_cache)]
 # Auth
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class OrgContext:
     org_id: uuid.UUID
     user_id: uuid.UUID | None
-    actor: str          # Clerk user id, or "dev" / "system"
+    actor: str  # Clerk user id, or "dev" / "system"
     actor_email: str | None
     role: OrgRole
 
@@ -96,8 +99,10 @@ async def current_org(
         else:
             try:
                 oid = uuid.UUID(x_org_id)
-            except ValueError:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "X-Org-Id must be a UUID")
+            except ValueError as exc:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST, "X-Org-Id must be a UUID"
+                ) from exc
             org = (
                 await session.execute(select(Org).where(Org.id == oid))
             ).scalar_one_or_none()
@@ -121,9 +126,7 @@ async def current_org(
     claims = await verify_clerk_token(authorization.split(" ", 1)[1])
 
     user = (
-        await session.execute(
-            select(User).where(User.clerk_user_id == claims["sub"])
-        )
+        await session.execute(select(User).where(User.clerk_user_id == claims["sub"]))
     ).scalar_one_or_none()
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "User not provisioned")
@@ -159,6 +162,7 @@ Admin = Annotated[OrgContext, Depends(require_admin)]
 # ---------------------------------------------------------------------------
 # Audit
 # ---------------------------------------------------------------------------
+
 
 async def write_audit(
     session: AsyncSession,

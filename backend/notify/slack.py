@@ -23,12 +23,24 @@ class SlackNotifier:
                 "type": "section",
                 "fields": [
                     {"type": "mrkdwn", "text": f"*Vendor*\n{vendor_name}"},
-                    {"type": "mrkdwn", "text": f"*Convergence*\n{alert.convergence_score:.1f}"},
-                    {"type": "mrkdwn", "text": f"*Threshold*\n{alert.threshold_value:.1f}"},
-                    {"type": "mrkdwn", "text": f"*Dimensions*\n{alert.dimension_count}"},
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Convergence*\n{alert.convergence_score:.1f}",
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Threshold*\n{alert.threshold_value:.1f}",
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Dimensions*\n{alert.dimension_count}",
+                    },
                 ],
             },
-            {"type": "section", "text": {"type": "mrkdwn", "text": alert.headline[:2900]}},
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": alert.headline[:2900]},
+            },
             {
                 "type": "context",
                 "elements": [

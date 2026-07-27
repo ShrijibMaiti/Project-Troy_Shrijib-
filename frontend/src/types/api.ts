@@ -25,7 +25,7 @@ export interface AlertItem {
 }
 
 export interface Signal {
-  id: string;        // <-- add this, the real backend UUID for disputing
+  id?: string;       // real backend UUID; absent in fixtures
   n: number;
   date: string;
   title: string;
@@ -159,4 +159,30 @@ export interface NotificationChannel {
   id: string;
   name: string;
   target: string;
+}
+
+export interface SeriesPoint {
+  date: string;
+  failed: number | null;
+  control: number | null;
+}
+
+export interface MethodologyLive {
+  calibrated: boolean;
+  engineVersion: string;
+  status: string;
+  summary: string;
+  eventsTested: number;
+  controls: number;
+  leadDays: number | null;
+  controlFpRate: string | null;
+  peakFailed: number | null;
+  peakControl: number | null;
+  failedName: string;
+  controlName: string;
+  failureDate: string | null;
+  series: SeriesPoint[];
+  weights: { name: string; v: number }[];
+  thresholds: { label: string; value: string }[];
+  limitations: string[];
 }

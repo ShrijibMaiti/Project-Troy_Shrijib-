@@ -17,7 +17,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -126,7 +126,11 @@ class Settings(BaseSettings):
                 "SEC_USER_AGENT unset — EDGAR requests will violate fair-access policy"
             )
 
-        missing = [n for n in ("weights", "thresholds") if not self.calibration_path(n).exists()]
+        missing = [
+            n
+            for n in ("weights", "thresholds")
+            if not self.calibration_path(n).exists()
+        ]
         if missing and self.require_calibration:
             raise RuntimeError(
                 f"Missing calibration: {missing}. The scoring engine cannot run "

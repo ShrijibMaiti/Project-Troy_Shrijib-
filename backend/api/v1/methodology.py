@@ -23,18 +23,28 @@ router = APIRouter(prefix="/methodology", tags=["methodology"])
 ENGINE_VERSION = "0.1.0"
 
 LIMITATIONS = [
-    "Public-signal monitoring only. A vendor aware of being scored can suppress "
-    "some signals; weighting favours hard-to-suppress sources (court dockets, "
-    "regulatory filings, job-posting removals).",
-    "Private companies have no SEC coverage. The private-company source tier "
-    "(Form D, CourtListener, Companies House, Crunchbase) is thinner than "
-    "public-company coverage.",
-    "Scores are relative to each vendor's own trailing baseline, not to peers. "
-    "A high score means unusual for THIS vendor.",
-    "Backtest evidence is directional, not statistical. The current event set is "
-    "too small to support any claim about lead time or precision.",
-    "This is monitoring evidence that attaches to an Article 28(3) register. "
-    "It is not itself a register of information.",
+    (
+        "Public-signal monitoring only. A vendor aware of being scored can suppress "
+        "some signals; weighting favours hard-to-suppress sources (court dockets, "
+        "regulatory filings, job-posting removals)."
+    ),
+    (
+        "Private companies have no SEC coverage. The private-company source tier "
+        "(Form D, CourtListener, Companies House, Crunchbase) is thinner than "
+        "public-company coverage."
+    ),
+    (
+        "Scores are relative to each vendor's own trailing baseline, not to peers. "
+        "A high score means unusual for THIS vendor."
+    ),
+    (
+        "Backtest evidence is directional, not statistical. The current event set is "
+        "too small to support any claim about lead time or precision."
+    ),
+    (
+        "This is monitoring evidence that attaches to an Article 28(3) register. "
+        "It is not itself a register of information."
+    ),
 ]
 
 

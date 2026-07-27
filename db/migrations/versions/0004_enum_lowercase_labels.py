@@ -15,6 +15,7 @@ on the models, Postgres and Python then agree everywhere.
 Revision ID: 0004_enum_lowercase
 Revises: 0003_crypto_shred_grants
 """
+
 from __future__ import annotations
 
 from alembic import op

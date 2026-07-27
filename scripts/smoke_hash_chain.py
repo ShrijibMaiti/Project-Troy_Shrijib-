@@ -97,6 +97,7 @@ def info(msg: str) -> None:
 # Owner-level operations (bypass the app role's restrictions)
 # ---------------------------------------------------------------------------
 
+
 def owner_exec(sql: str, **params) -> None:
     """Run as troy_owner with all guards ACTIVE. Used to prove the trigger."""
     with owner_engine.begin() as conn:
@@ -109,7 +110,9 @@ def with_trigger_disabled(sql: str, **params) -> None:
     trigger fires — so corruption cannot be accidental.
     """
     with owner_engine.begin() as conn:
-        conn.execute(text("ALTER TABLE signals DISABLE TRIGGER trg_signals_append_only"))
+        conn.execute(
+            text("ALTER TABLE signals DISABLE TRIGGER trg_signals_append_only")
+        )
         try:
             conn.execute(text(sql), params)
         finally:
@@ -121,6 +124,7 @@ def with_trigger_disabled(sql: str, **params) -> None:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 def make_dedup_key(vendor_id: uuid.UUID, url: str, d: date, metric: str) -> str:
     raw = f"{vendor_id}|{url}|{d.isoformat()}|{metric}"
@@ -202,6 +206,7 @@ async def make_signal(session, vendor: Vendor, n: int) -> Signal:
 # Teardown
 # ---------------------------------------------------------------------------
 
+
 def teardown() -> None:
     """
     Remove all smoke-test data.
@@ -254,6 +259,7 @@ def teardown() -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 async def main() -> int:
     print("\n" + "=" * 72)
@@ -495,9 +501,7 @@ async def main() -> int:
                 "ENABLE TRIGGER trg_shredded_fields_append_only"
             )
         )
-        conn.execute(
-            text("ALTER TABLE signals ENABLE TRIGGER trg_signals_append_only")
-        )
+        conn.execute(text("ALTER TABLE signals ENABLE TRIGGER trg_signals_append_only"))
 
     async with SessionFactory() as session:
         result = await verify_chain(session)
@@ -519,10 +523,14 @@ async def main() -> int:
     teardown()
     async with SessionFactory() as session:
         remaining = (
-            await session.execute(
-                select(Signal).where(Signal.summary.like(f"{MARKER}%"))
+            (
+                await session.execute(
+                    select(Signal).where(Signal.summary.like(f"{MARKER}%"))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         check(len(remaining) == 0, "test data removed")
 
     await dispose_engine()

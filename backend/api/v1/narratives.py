@@ -61,7 +61,9 @@ async def narrative_as_of(
         )
     ).scalar_one_or_none()
     if a is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No narrative at or before that time")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "No narrative at or before that time"
+        )
     return a
 
 

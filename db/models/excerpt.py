@@ -11,7 +11,6 @@ Two jobs:
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 from datetime import datetime
 
@@ -37,7 +36,9 @@ class Excerpt(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     char_count: Mapped[int] = mapped_column(Integer, nullable=False)
 
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    retrieved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     # sha256 of the raw fetched content, before extraction. Lets us detect a
     # source page changing under us without storing the page.

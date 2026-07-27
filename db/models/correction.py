@@ -14,7 +14,6 @@ This is why the UI must say "supersede and annotate", never "edit".
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -22,7 +21,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -33,16 +31,16 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class CorrectionReason(str, enum.Enum):
-    WRONG_ENTITY = "wrong_entity"          # right event, wrong company
+    WRONG_ENTITY = "wrong_entity"  # right event, wrong company
     FACTUALLY_INCORRECT = "factually_incorrect"
     DUPLICATE = "duplicate"
-    STALE = "stale"                        # old news resurfacing as new
-    MISCLASSIFIED = "misclassified"        # right event, wrong metric
-    VENDOR_DISPUTED = "vendor_disputed"    # right of reply
+    STALE = "stale"  # old news resurfacing as new
+    MISCLASSIFIED = "misclassified"  # right event, wrong metric
+    VENDOR_DISPUTED = "vendor_disputed"  # right of reply
     OTHER = "other"
 
 

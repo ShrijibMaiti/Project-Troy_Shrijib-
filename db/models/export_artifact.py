@@ -32,14 +32,14 @@ from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 
 
 class ExportKind(str, enum.Enum):
-    EVIDENCE_PACK = "evidence_pack"      # fleet-wide PDF
-    VENDOR_REPORT = "vendor_report"      # single-vendor PDF
-    ITS_REGISTER = "its_register"        # machine-readable register
+    EVIDENCE_PACK = "evidence_pack"  # fleet-wide PDF
+    VENDOR_REPORT = "vendor_report"  # single-vendor PDF
+    ITS_REGISTER = "its_register"  # machine-readable register
 
 
 class ExportFormat(str, enum.Enum):
     PDF = "pdf"
-    ITS_CSV = "its_csv"      # zip of RT.*.csv + manifest
+    ITS_CSV = "its_csv"  # zip of RT.*.csv + manifest
     ITS_JSON = "its_json"
 
 

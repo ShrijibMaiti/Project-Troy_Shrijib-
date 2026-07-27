@@ -15,7 +15,7 @@ const ALERT_THRESHOLD = 65;
 
 export default function VendorDetail() {
   const { id } = useParams();
-  const { data } = useVendorDetail(id);
+  const { data } = useVendorDetail(id ?? '');
   const { activeSignal, setActiveSignal } = useUiStore();
   const appendSupersede = useAppendSupersede();
 

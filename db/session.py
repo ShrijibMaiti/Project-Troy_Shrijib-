@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 
 # Load environment variables before module-level variables try to access them
@@ -34,7 +35,7 @@ engine: AsyncEngine = create_async_engine(
     echo=ECHO_SQL,
     pool_size=10,
     max_overflow=20,
-    pool_pre_ping=True,      # survives Postgres restarts / idle disconnects
+    pool_pre_ping=True,  # survives Postgres restarts / idle disconnects
     pool_recycle=1800,
 )
 

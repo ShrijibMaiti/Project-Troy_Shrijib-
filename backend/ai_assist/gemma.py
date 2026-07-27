@@ -143,9 +143,7 @@ async def _call(
     try:
         parts = data["candidates"][0]["content"]["parts"]
         # Skip thought parts; only real output carries the answer.
-        text = next(
-            p["text"] for p in parts if p.get("text") and not p.get("thought")
-        )
+        text = next(p["text"] for p in parts if p.get("text") and not p.get("thought"))
     except (KeyError, IndexError, TypeError, StopIteration):
         return None
 
@@ -186,6 +184,7 @@ def _parse_json(text: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # Public interface
 # ---------------------------------------------------------------------------
+
 
 async def generate_json(
     system: str,

@@ -70,15 +70,17 @@ async def verify_clerk_token(token: str) -> dict[str, Any]:
             },
             leeway=10,  # tolerate small clock skew
         )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token expired")
+    except jwt.ExpiredSignatureError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token expired") from exc
     except jwt.InvalidTokenError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"Invalid token: {exc}")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, f"Invalid token: {exc}"
+        ) from exc
     except Exception as exc:
         # JWKS fetch failure, network error, etc. Fail CLOSED.
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, f"Auth verification unavailable: {exc}"
-        )
+        ) from exc
 
     if not claims.get("sub"):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token has no subject")

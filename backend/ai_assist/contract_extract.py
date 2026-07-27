@@ -99,7 +99,7 @@ async def extract_contract(
         raise ExtractionUnavailable("GEMMA_API_KEY is not configured")
 
     if len(pdf_bytes) > MAX_PDF_BYTES:
-        raise ValueError(f"PDF exceeds {MAX_PDF_BYTES // (1024*1024)} MB limit")
+        raise ValueError(f"PDF exceeds {MAX_PDF_BYTES // (1024 * 1024)} MB limit")
 
     if not pdf_bytes.startswith(b"%PDF"):
         raise ValueError("File does not appear to be a PDF")
@@ -109,7 +109,7 @@ async def extract_contract(
         USER_PROMPT,
         model=gemma.model_for("vision"),
         files=[("application/pdf", pdf_bytes)],
-        temperature=0.05,   # extraction, not creativity
+        temperature=0.05,  # extraction, not creativity
         max_tokens=12288,
         session=session,
         org_id=org_id,
@@ -174,7 +174,12 @@ def _coerce(raw: dict) -> dict:
         out["subcontractors"] = []
 
     v = out.get("substitutability")
-    valid = {"not_substitutable", "highly_complex", "medium_complex", "easily_substitutable"}
+    valid = {
+        "not_substitutable",
+        "highly_complex",
+        "medium_complex",
+        "easily_substitutable",
+    }
     out["substitutability"] = v if v in valid else None
 
     for f in ("notice_period_days", "annual_cost_eur"):

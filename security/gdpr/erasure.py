@@ -53,7 +53,9 @@ def derive_subject_ref(name: str, vendor_id: uuid.UUID) -> str:
     Must match the derivation used at encryption time, or the key won't be
     found and the erasure silently no-ops.
     """
-    return hashlib.sha256(f"{name.strip().lower()}|{vendor_id}".encode()).hexdigest()[:40]
+    return hashlib.sha256(f"{name.strip().lower()}|{vendor_id}".encode()).hexdigest()[
+        :40
+    ]
 
 
 @router.post("/erasure", response_model=ErasureOut)

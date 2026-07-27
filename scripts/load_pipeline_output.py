@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from sqlalchemy import select
+
 from backend.ingest.from_pipeline import ingest_many
 from db.models.org import Org
 from db.session import SessionFactory, dispose_engine
@@ -35,17 +36,22 @@ async def main(path: str, org_id: str | None) -> int:
         if org_id:
             oid = uuid.UUID(org_id)
         else:
-            org = (await s.execute(select(Org).where(Org.is_active).limit(1))).scalar_one_or_none()
+            org = (
+                await s.execute(select(Org).where(Org.is_active).limit(1))
+            ).scalar_one_or_none()
             if org is None:
-                print("No org exists. Create one first."); return 1
+                print("No org exists. Create one first.")
+                return 1
             oid = org.id
 
         results = await ingest_many(s, oid, outputs)
         await s.commit()
 
     for r in results:
-        print(f"  {r['vendor']}: composite {r['composite_0_100']:.1f}/100, "
-              f"{r['signals_written']} signals, dims {r['dimensions_scored']}")
+        print(
+            f"  {r['vendor']}: composite {r['composite_0_100']:.1f}/100, "
+            f"{r['signals_written']} signals, dims {r['dimensions_scored']}"
+        )
     print(f"\nLoaded {len(results)} vendor(s). Chain still intact:")
     await dispose_engine()
     return 0

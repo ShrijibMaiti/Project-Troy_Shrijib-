@@ -18,6 +18,7 @@ Privilege shape is deliberate and asymmetric:
 Revision ID: 0003_crypto_shred_grants
 Revises: 0002_append_only
 """
+
 from __future__ import annotations
 
 from alembic import op
@@ -80,9 +81,7 @@ def upgrade() -> None:
         $fn$
         """
     )
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_subject_keys_erasure_only ON subject_keys"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_subject_keys_erasure_only ON subject_keys")
     op.execute(
         """
         CREATE TRIGGER trg_subject_keys_erasure_only
@@ -93,9 +92,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_subject_keys_erasure_only ON subject_keys"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_subject_keys_erasure_only ON subject_keys")
     op.execute("DROP FUNCTION IF EXISTS troy_subject_keys_erasure_only()")
     op.execute(
         "DROP TRIGGER IF EXISTS trg_shredded_fields_append_only ON shredded_fields"

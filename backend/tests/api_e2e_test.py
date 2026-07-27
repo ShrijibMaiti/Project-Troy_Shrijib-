@@ -26,7 +26,7 @@ from db.integrity.hash_chain import append_signal
 from db.models.excerpt import Excerpt
 from db.models.org import Org
 from db.models.signal import Signal, SignalMetric, SignalSource
-from db.models.vendor import EntityType, Vendor
+from db.models.vendor import Vendor
 from db.session import SessionFactory
 
 MARKER = "E2E-TEST"
@@ -149,6 +149,7 @@ async def _seed_signals(vendor_id: uuid.UUID, n: int = 3) -> list[uuid.UUID]:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 async def test_health_is_reachable(client):
     r = await client.get("/api/v1/health")
@@ -275,7 +276,7 @@ async def test_methodology_states_limitations(client):
     body = r.json()
     assert len(body["limitations"]) >= 4
     # The relabel must be visible in the product, not just the pitch.
-    assert any("not itself a register" in l for l in body["limitations"])
+    assert any("not itself a register" in text for text in body["limitations"])
 
 
 async def test_no_regenerate_endpoint_exists():
@@ -286,6 +287,7 @@ async def test_no_regenerate_endpoint_exists():
     app.routes contains both Route objects and _IncludedRouter wrappers, so
     walk it defensively rather than assuming .path exists.
     """
+
     def paths(routes) -> set[str]:
         found: set[str] = set()
         for r in routes:

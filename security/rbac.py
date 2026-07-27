@@ -27,30 +27,51 @@ from db.models.vendor import Vendor
 # reading this table IS the policy.
 PERMISSIONS: dict[OrgRole, set[str]] = {
     OrgRole.OWNER: {
-        "vendor:read", "vendor:write", "vendor:delete",
-        "signal:read", "signal:dispute",
-        "contract:read", "contract:write",
-        "alert:read", "alert:ack",
+        "vendor:read",
+        "vendor:write",
+        "vendor:delete",
+        "signal:read",
+        "signal:dispute",
+        "contract:read",
+        "contract:write",
+        "alert:read",
+        "alert:ack",
         "export:run",
-        "apikey:manage", "user:manage", "gdpr:erase",
+        "apikey:manage",
+        "user:manage",
+        "gdpr:erase",
     },
     OrgRole.ADMIN: {
-        "vendor:read", "vendor:write", "vendor:delete",
-        "signal:read", "signal:dispute",
-        "contract:read", "contract:write",
-        "alert:read", "alert:ack",
+        "vendor:read",
+        "vendor:write",
+        "vendor:delete",
+        "signal:read",
+        "signal:dispute",
+        "contract:read",
+        "contract:write",
+        "alert:read",
+        "alert:ack",
         "export:run",
-        "apikey:manage", "user:manage", "gdpr:erase",
+        "apikey:manage",
+        "user:manage",
+        "gdpr:erase",
     },
     OrgRole.ANALYST: {
-        "vendor:read", "vendor:write",
-        "signal:read", "signal:dispute",
-        "contract:read", "contract:write",
-        "alert:read", "alert:ack",
+        "vendor:read",
+        "vendor:write",
+        "signal:read",
+        "signal:dispute",
+        "contract:read",
+        "contract:write",
+        "alert:read",
+        "alert:ack",
         "export:run",
     },
     OrgRole.VIEWER: {
-        "vendor:read", "signal:read", "contract:read", "alert:read",
+        "vendor:read",
+        "signal:read",
+        "contract:read",
+        "alert:read",
     },
 }
 
@@ -81,10 +102,16 @@ async def accessible_vendor_ids(
         return None
 
     rows = (
-        await session.execute(
-            select(OrgVendorAccess.vendor_id).where(OrgVendorAccess.user_id == user_id)
+        (
+            await session.execute(
+                select(OrgVendorAccess.vendor_id).where(
+                    OrgVendorAccess.user_id == user_id
+                )
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     return list(rows) if rows else None
 

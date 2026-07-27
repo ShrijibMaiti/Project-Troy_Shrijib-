@@ -13,7 +13,6 @@ to one computed under v4, and an auditor will ask.
 """
 
 from __future__ import annotations
-from db.base import PgEnum
 
 import enum
 import uuid
@@ -22,7 +21,6 @@ from datetime import datetime
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -32,15 +30,15 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
+from db.base import Base, CreatedAtMixin, PgEnum, UUIDPrimaryKeyMixin
 from db.models.signal import SignalMetric
 
 
 class ConfidenceTier(str, enum.Enum):
     """Legal posture, not decoration. Renders as a badge in UI and PDF."""
 
-    VERIFIED = "verified"        # primary filing, or 2+ independent sources
-    REPORTED = "reported"        # one credible source
+    VERIFIED = "verified"  # primary filing, or 2+ independent sources
+    REPORTED = "reported"  # one credible source
     UNCONFIRMED = "unconfirmed"  # weak / aggregator only
 
 
@@ -59,7 +57,7 @@ class DimensionScore(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     )
 
     raw_value: Mapped[float | None] = mapped_column(Float)
-    baseline: Mapped[float | None] = mapped_column(Float)   # 12-mo trailing median
+    baseline: Mapped[float | None] = mapped_column(Float)  # 12-mo trailing median
     z_score: Mapped[float | None] = mapped_column(Float)
     anomaly_ratio: Mapped[float | None] = mapped_column(Float)  # size-bias fix
     contribution: Mapped[float] = mapped_column(Float, nullable=False)  # weighted
@@ -80,7 +78,9 @@ class DimensionScore(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
     # underlying evidence.
     signal_ids: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
 
-    vendor_score = relationship("VendorScore", back_populates="dimensions", lazy="raise")
+    vendor_score = relationship(
+        "VendorScore", back_populates="dimensions", lazy="raise"
+    )
 
     __table_args__ = (
         Index("ix_dimension_scores_vendor_dim", "vendor_id", "dimension", "created_at"),
