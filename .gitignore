@@ -55,3 +55,4 @@ _hold/
 /fix_*.py
 /refactor*.py
 /check*.py
+demo_vendors.json

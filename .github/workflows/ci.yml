@@ -1,4 +1,4 @@
-# CI â€” the regression gate.
+# CI Ã¢â‚¬â€ the regression gate.
 #
 # Runs against REAL Postgres and Redis service containers, not mocks. The bugs
 # this project has actually hit (asyncpg parameter typing, enum label casing,
@@ -75,11 +75,11 @@ jobs:
 
       - name: Lint
         run: |
-          ruff check backend db security scripts infra
-          ruff format --check backend db security scripts infra
+          python -m ruff check backend db security scripts infra
+          python -m ruff format --check backend db security scripts infra
 
       - name: Type check
-        run: mypy backend db security --ignore-missing-imports
+        run: python -m mypy backend db security --ignore-missing-imports
         continue-on-error: true  # advisory until annotations are complete
 
       # THE EVIDENCE-INTEGRITY GATE.

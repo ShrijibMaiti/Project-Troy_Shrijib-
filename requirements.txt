@@ -28,3 +28,7 @@ python-dotenv>=1.0
 reportlab>=4.2
 pandas>=2.2
 lxml>=5.3
+
+# --- dev tooling (CI) ---
+ruff>=0.8
+mypy>=1.13
