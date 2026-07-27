@@ -74,7 +74,7 @@ jobs:
               echo "Deploy healthy (status=$status)"
               exit 0
             fi
-            echo "attempt $i: HTTP $code — retrying"
+            echo "attempt $i: HTTP $code â€” retrying"
             sleep 15
           done
           echo "::error::Health check never passed"
