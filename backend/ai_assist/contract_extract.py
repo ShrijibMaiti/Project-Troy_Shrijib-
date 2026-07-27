@@ -110,7 +110,7 @@ async def extract_contract(
         model=gemma.model_for("vision"),
         files=[("application/pdf", pdf_bytes)],
         temperature=0.05,   # extraction, not creativity
-        max_tokens=6144,
+        max_tokens=12288,
         session=session,
         org_id=org_id,
         vendor_id=vendor_id,

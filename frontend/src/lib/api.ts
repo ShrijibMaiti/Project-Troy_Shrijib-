@@ -491,3 +491,93 @@ export async function getCompare(): Promise<{
   }));
   return { rows, findings: d.findings ?? [], note: d.note ?? '' };
 }
+// ---- Gemma contract extraction (Domain 7 / integration #1) ---------------
+
+export interface ContractDraftOut {
+  draft: Record<string, any>;
+  confidence: Record<string, number>;
+  evidence: Record<string, string>;
+  unfound: string[];
+  extractedAt: string;
+  modelId: string;
+  vendorId: string;
+}
+
+/**
+ * Deliberately bypasses apiFetch: multipart requires the browser to set
+ * Content-Type itself so the boundary is included. Nothing is saved by this
+ * call — it returns a draft the analyst confirms.
+ */
+export async function extractContract(vendorId: string, file: File): Promise<ContractDraftOut> {
+  const headers: Record<string, string> = {};
+  if (DEV_ORG_ID) headers['X-Org-Id'] = DEV_ORG_ID;
+  if (getTokenFn) {
+    try { const t = await getTokenFn(); if (t) headers['Authorization'] = `Bearer ${t}`; }
+    catch { /* ignore */ }
+  }
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${API_URL}/api/v1/register/contract/${vendorId}/extract`, {
+    method: 'POST', headers, body: form,
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`${res.status}: ${t || res.statusText}`);
+  }
+  const d = await res.json();
+  return {
+    draft: d.draft ?? {},
+    confidence: d.confidence ?? {},
+    evidence: d.evidence ?? {},
+    unfound: d.unfound ?? [],
+    extractedAt: d.extracted_at ?? '',
+    modelId: d.model_id ?? '',
+    vendorId: d.vendor_id ?? vendorId,
+  };
+}
+
+/** The confirm step — the existing, tested register write path. */
+export async function saveContract(vendorId: string, contract: Record<string, any>): Promise<void> {
+  await apiFetch(`/api/v1/register/contract/${vendorId}`, {
+    method: 'PUT',
+    body: JSON.stringify(contract),
+  });
+}
+
+// ---- Gemma vendor profiling (Domain 6 / integration #2) ------------------
+
+export interface VendorProfileDraft {
+  legalName: string | null;
+  displayName: string | null;
+  entityType: string;
+  primaryDomain: string | null;
+  hqCountry: string | null;
+  ticker: string | null;
+  aliases: string[];
+  negativeTerms: string[];
+  disambiguationQuery: string | null;
+  industry: string | null;
+  confidence: number;
+  note: string | null;
+}
+
+export async function profileVendor(name: string): Promise<VendorProfileDraft> {
+  const d = await apiFetch<any>('/api/v1/vendors/profile', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+  return {
+    legalName: d.legal_name ?? null,
+    displayName: d.display_name ?? null,
+    entityType: d.entity_type ?? 'unknown',
+    primaryDomain: d.primary_domain ?? null,
+    hqCountry: d.hq_country ?? null,
+    ticker: d.ticker ?? null,
+    aliases: d.aliases ?? [],
+    negativeTerms: d.negative_terms ?? [],
+    disambiguationQuery: d.disambiguation_query ?? null,
+    industry: d.industry ?? null,
+    confidence: d.confidence ?? 0,
+    note: d.note ?? null,
+  };
+}

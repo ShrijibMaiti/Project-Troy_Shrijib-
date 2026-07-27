@@ -141,8 +141,12 @@ async def _call(
             return None
 
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError, TypeError):
+        parts = data["candidates"][0]["content"]["parts"]
+        # Skip thought parts; only real output carries the answer.
+        text = next(
+            p["text"] for p in parts if p.get("text") and not p.get("thought")
+        )
+    except (KeyError, IndexError, TypeError, StopIteration):
         return None
 
     usage = data.get("usageMetadata", {}) or {}

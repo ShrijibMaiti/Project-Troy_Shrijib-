@@ -11,8 +11,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 
+from backend.ai_assist.schemas import VendorProfileDraft
+from backend.ai_assist.vendor_profile import ProfileUnavailable, profile_vendor
 from backend.deps import DB, Admin, CurrentOrg, Writer, write_audit
 from backend.schemas import (
     VendorCreate,
@@ -105,6 +108,30 @@ async def list_vendors(
     }
     out.sort(key=keys[sort])
     return out
+
+
+class VendorProfileIn(BaseModel):
+    name: str
+
+
+@router.post("/profile", response_model=VendorProfileDraft)
+async def draft_vendor_profile(
+    body: VendorProfileIn, session: DB, org: Writer
+) -> VendorProfileDraft:
+    """
+    Gemma drafts identifying details and disambiguation terms for a vendor name.
+    NOTHING IS CREATED. The analyst reviews the draft, edits it, then submits
+    through POST /vendors — the existing, tested creation path.
+    """
+    try:
+        return await profile_vendor(session, name=body.name, org_id=org.org_id)
+    except ProfileUnavailable as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            f"Profiling unavailable ({exc}). Enter the fields manually.",
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
 
 
 @router.get("/{vendor_id}", response_model=VendorOut)

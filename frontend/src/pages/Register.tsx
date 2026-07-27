@@ -1,18 +1,22 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import ExportButton from '@/components/jobs/ExportButton';
 import JobProgress from '@/components/jobs/JobProgress';
 import RiskBadge from '@/components/risk/RiskBadge';
 import StalenessChip from '@/components/risk/StalenessChip';
+import ContractExtractDialog from '@/components/register/ContractExtractDialog';
 import { useRegister } from '@/lib/queries';
 import { runExport, downloadExport } from '@/lib/api';
 
 const GRID =
-  'grid min-w-[1280px] grid-cols-[200px_130px_110px_150px_110px_140px_120px_90px_110px_120px] gap-3';
+  'grid min-w-[1280px] grid-cols-[200px_130px_110px_150px_110px_140px_120px_90px_110px_120px_90px] gap-3';
 
 type JobState = 'idle' | 'running' | 'done';
 
 export default function RegisterPage() {
   const { data } = useRegister();
+  const qc = useQueryClient();
+  const [extractFor, setExtractFor] = useState<{ id: string; name: string } | null>(null);
   const [jobState, setJobState] = useState<JobState>('idle');
   const [jobPct, setJobPct] = useState(0);
   const [jobType, setJobType] = useState('');
@@ -88,6 +92,7 @@ export default function RegisterPage() {
           <span>SUBST.</span>
           <span>EXIT PLAN</span>
           <span className="text-risk-green">LIVE SIGNAL</span>
+          <span className="text-risk-blue">CONTRACT</span>
         </div>
         {data.rows.map((r) => (
           <div
@@ -113,6 +118,12 @@ export default function RegisterPage() {
               <RiskBadge state={r.state} />
               <StalenessChip days={r.staleDays} variant="compact" />
             </div>
+            <button
+              onClick={() => setExtractFor({ id: r.vendorId, name: r.name })}
+              className="cursor-pointer rounded-sm border border-line-3 bg-transparent px-2 py-1 font-mono text-[9px] tracking-[.08em] text-dim hover:border-mute hover:text-fg"
+            >
+              {r.contract === '—' ? 'EXTRACT' : 'RE-EXTRACT'}
+            </button>
           </div>
         ))}
       </div>
@@ -130,6 +141,16 @@ export default function RegisterPage() {
           </div>
         ))}
       </div>
+
+      {extractFor && (
+        <ContractExtractDialog
+          vendorId={extractFor.id}
+          vendorName={extractFor.name}
+          open={true}
+          onClose={() => setExtractFor(null)}
+          onSaved={() => qc.invalidateQueries({ queryKey: ['register'] })}
+        />
+      )}
     </main>
   );
 }
