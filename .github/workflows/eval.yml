@@ -1,7 +1,7 @@
 # RECALL REGRESSION GATE.
 #
 # Prompt changes are code changes. A prompt tweak can silently destroy
-# validator recall with no compile error and no failing unit test â€” the model
+# validator recall with no compile error and no failing unit test — the model
 # just starts rejecting real signals, and the fleet goes quiet.
 #
 # This is the only defence against that, which is why it blocks merges.
@@ -39,7 +39,7 @@ jobs:
         id: fixture
         run: |
           if [ ! -f evaluation/recall/label_set.jsonl ]; then
-            echo "::warning::No labelled fixture yet â€” recall is UNMEASURED."
+            echo "::warning::No labelled fixture yet — recall is UNMEASURED."
             echo "Until evaluation/recall/label_set.jsonl exists, the 80% rejection"
             echo "rate tells us nothing about how many REAL signals are discarded."
             echo "exists=false" >> $GITHUB_OUTPUT
