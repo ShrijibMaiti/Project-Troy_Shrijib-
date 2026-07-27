@@ -1,4 +1,4 @@
-# CI — the regression gate.
+# CI â€” the regression gate.
 #
 # Runs against REAL Postgres and Redis service containers, not mocks. The bugs
 # this project has actually hit (asyncpg parameter typing, enum label casing,
@@ -71,7 +71,7 @@ jobs:
             -c "GRANT USAGE ON SCHEMA public TO troy_app;"
 
       - name: Migrate
-        run: alembic upgrade head
+        run: python -m alembic upgrade head
 
       - name: Lint
         run: |
